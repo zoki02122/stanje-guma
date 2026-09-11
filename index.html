@@ -204,7 +204,7 @@
         <button class="clear-search-btn" id="clearSearchBtn" title="Poništi pretragu" aria-label="Poništi pretragu">&times;</button>
       </div>
       <div class="search">
-        <input type="text" id="searchInput" placeholder="Pretraga po proizvođaču...">
+        <input type="text" id="searchInput" placeholder="Pretraga po proizvođaču..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
       </div>
       <div class="chips" id="chips">
         <div class="chip active" data-f="sve">Sve</div>
@@ -254,7 +254,7 @@
 
   <div class="field">
     <label>Proizvođač</label>
-    <input type="text" id="f_proizvodjac" placeholder="npr. Continental">
+    <input type="text" id="f_proizvodjac" placeholder="npr. Continental" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
   </div>
 
   <div class="field">
@@ -265,14 +265,14 @@
       <input type="number" id="f_dim_p" placeholder="60" inputmode="numeric">
       <span class="dim-sep">/</span>
       <input type="number" id="f_dim_r" placeholder="14" inputmode="numeric">
-      <input type="text" id="f_dim_extra" class="dim-extra" placeholder="C">
+      <input type="text" id="f_dim_extra" class="dim-extra" placeholder="C" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
     </div>
   </div>
 
   <div class="row2">
     <div class="field">
       <label>Šara dubina</label>
-      <input type="text" id="f_sara" placeholder="npr. 4mm">
+      <input type="text" id="f_sara" inputmode="numeric" placeholder="npr. 4" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
     </div>
     <div class="field">
       <label>Količina</label>
@@ -282,18 +282,18 @@
 
   <div class="row2">
     <div class="field">
-      <label>Godište / stanje</label>
-      <input type="text" id="f_godiste" placeholder="npr. 2021 odlična">
+      <label>Godište</label>
+      <input type="text" id="f_godiste" inputmode="numeric" placeholder="npr. 2021" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
     </div>
     <div class="field">
       <label>Cena</label>
-      <input type="text" id="f_cena" placeholder="npr. 2.500">
+      <input type="text" id="f_cena" inputmode="numeric" placeholder="npr. 2.500" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
     </div>
   </div>
 
   <div class="field">
     <label>Napomena</label>
-    <textarea id="f_napomena" placeholder="npr. ok, jedna oštećena..."></textarea>
+    <textarea id="f_napomena" placeholder="npr. ok, jedna oštećena..."></textarea autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
   </div>
 
   <div class="sheet-actions">
@@ -655,29 +655,52 @@ function autoAdvance(el, next, maxLen){
 autoAdvance(dimWEl, dimPEl, 3);
 autoAdvance(dimPEl, dimREl, 2);
 autoAdvance(dimREl, dimExtraEl, 2);
-let chainSelected = null;      // element whose current full-selection came from backspace chain-nav
-let arrivedViaChainNav = false; // set just before .focus() when jumping back via backspace
+
+// fieldOriginal: the KNOWN-GOOD value for each field, captured ONCE when the form opens.
+// This is never touched by focus events, so it cannot be corrupted by a stray/late refocus.
+// pristineArmed: which fields currently show their untouched, freshly-selected content.
+const fieldOriginal = new WeakMap();
+const pristineArmed = new WeakSet();
+
+function snapshotField(el){
+  fieldOriginal.set(el, el.value);
+}
 
 function handleFocusSelect(el){
-  if(el.type === 'date'){ chainSelected = null; return; }
+  if(el.type === 'date'){ pristineArmed.delete(el); return; }
   el.select();
-  chainSelected = arrivedViaChainNav ? el : null;
-  arrivedViaChainNav = false;
+  pristineArmed.add(el);
 }
 
 function wireBackspace(el, prev){
-  if(!prev) return;
+  const goPrev = () => { if(prev) prev.focus(); };
+
   el.addEventListener('keydown', (e) => {
     if(e.key !== 'Backspace') return;
-    const shouldJump = (el.value === '') || (chainSelected === el);
-    if(shouldJump){
+    if(el.value === '' || pristineArmed.has(el)){
       e.preventDefault();
-      arrivedViaChainNav = true;
-      prev.focus();
+      goPrev();
     }
   });
+
+  el.addEventListener('beforeinput', (e) => {
+    if(e.inputType !== 'deleteContentBackward') return;
+    if(el.value === '' || pristineArmed.has(el)){
+      e.preventDefault();
+      goPrev();
+    }
+  });
+
   el.addEventListener('input', () => {
-    if(chainSelected === el) chainSelected = null;
+    const original = fieldOriginal.get(el) ?? '';
+    if(!pristineArmed.has(el)) return;
+    const trimmed = el.value.length < original.length && original.startsWith(el.value);
+    if(trimmed){
+      el.value = original;
+      goPrev();
+      return;
+    }
+    pristineArmed.delete(el);
   });
 }
 wireBackspace(dimPEl, dimWEl);
@@ -687,11 +710,19 @@ wireBackspace(dimExtraEl, dimREl);
 // extend backward navigation across the whole add/edit form
 const fProizvodjacEl = document.getElementById('f_proizvodjac');
 const fSaraEl = document.getElementById('f_sara');
+fSaraEl.addEventListener('blur', () => {
+  const core = fSaraEl.value.replace(/\s*mm\s*/gi, '').trim();
+  fSaraEl.value = core ? core + 'mm' : '';
+});
 const fKolicinaEl = document.getElementById('f_kolicina');
 const fGodisteEl = document.getElementById('f_godiste');
 const fCenaEl = document.getElementById('f_cena');
+fCenaEl.addEventListener('input', () => {
+  fCenaEl.value = formatThousands(fCenaEl.value);
+});
 const fNapomenaEl = document.getElementById('f_napomena');
 wireBackspace(dimWEl, fProizvodjacEl);
+wireBackspace(fProizvodjacEl, null);
 wireBackspace(fSaraEl, dimExtraEl);
 wireBackspace(fKolicinaEl, fSaraEl);
 wireBackspace(fGodisteEl, fKolicinaEl);
@@ -712,8 +743,15 @@ function openAdd(){
   document.getElementById('f_dim_r').value = '';
   document.getElementById('f_dim_extra').value = '';
   setTip('M+S');
+  snapshotAllFields();
   openSheet();
 }
+
+function snapshotAllFields(){
+  [fProizvodjacEl, dimWEl, dimPEl, dimREl, dimExtraEl, fSaraEl, fKolicinaEl, fGodisteEl, fCenaEl, fNapomenaEl]
+    .forEach(el => snapshotField(el));
+}
+
 function openEdit(id){
   const item = items.find(i => i.id === id);
   if(!item) return;
@@ -732,6 +770,7 @@ function openEdit(id){
   document.getElementById('f_cena').value = item.cena || '';
   document.getElementById('f_napomena').value = item.napomena || '';
   setTip(item.tip || 'M+S');
+  snapshotAllFields();
   openSheet();
 }
 
@@ -829,6 +868,8 @@ function openSale(id){
   document.getElementById('s_kolicina').max = item.kolicina;
   sCenaInput.value = formatThousands(parseFirstNumber(item.cena));
   document.getElementById('s_datum').value = todayISO();
+  snapshotField(document.getElementById('s_kolicina'));
+  snapshotField(sCenaInput);
   updateSaleTotal();
   openSaleModal();
 }
@@ -839,6 +880,7 @@ function updateSaleTotal(){
   document.getElementById('s_ukupno').textContent = fmt(k*c) + ' din';
 }
 document.getElementById('s_kolicina').addEventListener('input', updateSaleTotal);
+wireBackspace(document.getElementById('s_kolicina'), null);
 wireBackspace(sCenaInput, document.getElementById('s_kolicina'));
 document.getElementById('saleCancelBtn').addEventListener('click', () => closeSaleModal(false));
 saleBackdrop.addEventListener('click', () => closeSaleModal(false));
