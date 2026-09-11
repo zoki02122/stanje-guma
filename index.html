@@ -655,16 +655,29 @@ function autoAdvance(el, next, maxLen){
 autoAdvance(dimWEl, dimPEl, 3);
 autoAdvance(dimPEl, dimREl, 2);
 autoAdvance(dimREl, dimExtraEl, 2);
-let suppressSelectOnFocus = false;
+let chainSelected = null;      // element whose current full-selection came from backspace chain-nav
+let arrivedViaChainNav = false; // set just before .focus() when jumping back via backspace
+
+function handleFocusSelect(el){
+  if(el.type === 'date'){ chainSelected = null; return; }
+  el.select();
+  chainSelected = arrivedViaChainNav ? el : null;
+  arrivedViaChainNav = false;
+}
 
 function wireBackspace(el, prev){
   if(!prev) return;
   el.addEventListener('keydown', (e) => {
-    if(e.key === 'Backspace' && el.value === ''){
+    if(e.key !== 'Backspace') return;
+    const shouldJump = (el.value === '') || (chainSelected === el);
+    if(shouldJump){
       e.preventDefault();
-      suppressSelectOnFocus = true;
+      arrivedViaChainNav = true;
       prev.focus();
     }
+  });
+  el.addEventListener('input', () => {
+    if(chainSelected === el) chainSelected = null;
   });
 }
 wireBackspace(dimPEl, dimWEl);
@@ -1125,10 +1138,7 @@ function wireSearchDim(el, key, next, maxLen){
     if(v.length >= maxLen && next) next.focus();
     renderStanje();
   });
-  el.addEventListener('focus', () => {
-    if(suppressSelectOnFocus){ suppressSelectOnFocus = false; return; }
-    el.select();
-  });
+  el.addEventListener('focus', () => handleFocusSelect(el));
 }
 wireSearchDim(sqW, 'w', sqP, 3);
 wireSearchDim(sqP, 'p', sqR, 2);
@@ -1369,12 +1379,7 @@ document.getElementById('wipeSalesBtn').addEventListener('click', () => {
 
 // ---------- SELECT-ALL ON FOCUS (edit/sale forms) ----------
 document.querySelectorAll('#sheet input, #sheet textarea, #saleSheet input').forEach(el => {
-  el.addEventListener('focus', () => {
-    if(suppressSelectOnFocus){ suppressSelectOnFocus = false; return; }
-    if(el.type !== 'date'){
-      el.select();
-    }
-  });
+  el.addEventListener('focus', () => handleFocusSelect(el));
 });
 
 // ---------- CLOSE X BUTTONS ----------
