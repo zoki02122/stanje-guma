@@ -193,6 +193,10 @@
       </div>
     </div>
     <div id="warnBanner">Podaci se ne čuvaju trajno u ovom prikazu (samo dok je otvoreno). Za trajno čuvanje aplikacija treba da bude postavljena kao pravi sajt ili otvorena kao preuzet fajl u Chrome-u.</div>
+    <div id="backupReminderBanner" style="display:none;align-items:center;justify-content:space-between;gap:10px;background:var(--danger-dim);color:var(--red);font-size:12.5px;padding:9px 10px;border-radius:8px;margin-top:10px;">
+      <span id="backupReminderText"></span>
+      <button type="button" id="backupReminderBtn" style="flex:0 0 auto;background:var(--red);color:#2a0d0d;border:none;padding:6px 12px;border-radius:7px;font-weight:600;font-size:12px;font-family:inherit;cursor:pointer;">Izvezi bekap</button>
+    </div>
     <div id="stanjeControls">
       <div class="search-dim">
         <div class="dim-inputs">
@@ -368,9 +372,21 @@
     <div class="settings-label">Rezervna kopija</div>
     <button class="file-btn" id="exportBackupBtn">Izvezi bekap (.json)</button>
     <div class="settings-hint">Snima kompletno stanje i istoriju prodaje u jedan fajl koji možeš sačuvati sa strane.</div>
+    <div class="settings-hint" id="lastBackupInfo">Poslednji bekap: —</div>
     <label class="file-btn" for="importBackupInput">Uvezi bekap (.json)</label>
     <input type="file" id="importBackupInput" accept=".json,application/json">
     <div class="settings-hint">Vraća stanje iz prethodno izvezenog bekapa (zamenjuje trenutne podatke).</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="settings-section">
+    <div class="settings-label">Podsetnik za bekap</div>
+    <div class="field">
+      <label>Podseti me na svakih (dana)</label>
+      <input type="number" id="backupIntervalInput" min="1" placeholder="7">
+    </div>
+    <div class="settings-hint">Kad prođe ovoliko dana od poslednjeg bekapa, gore će se pojaviti podsetnik.</div>
   </div>
 
   <div class="divider"></div>
@@ -419,6 +435,8 @@
 <script>
 const LS_ITEMS = 'stanjeGuma_items_v1';
 const LS_SALES = 'stanjeGuma_sales_v1';
+const LS_LAST_BACKUP = 'stanjeGuma_lastBackup';
+const LS_BACKUP_INTERVAL = 'stanjeGuma_backupIntervalDays';
 let storageOK = true;
 
 const seedData = [
@@ -486,6 +504,55 @@ function loadAll(){
 }
 function persistItems(){ if(!safeSet(LS_ITEMS, items)) showToast('Upozorenje: nije sačuvano trajno'); }
 function persistSales(){ if(!safeSet(LS_SALES, sales)) showToast('Upozorenje: nije sačuvano trajno'); }
+
+// ---------- BACKUP REMINDER ----------
+function getBackupIntervalDays(){
+  const v = parseInt(localStorage.getItem(LS_BACKUP_INTERVAL));
+  return (v && v > 0) ? v : 7;
+}
+function setBackupIntervalDays(days){
+  localStorage.setItem(LS_BACKUP_INTERVAL, String(days));
+}
+function getLastBackupDate(){
+  const v = localStorage.getItem(LS_LAST_BACKUP);
+  return v ? new Date(v) : null;
+}
+function markBackupDone(){
+  localStorage.setItem(LS_LAST_BACKUP, new Date().toISOString());
+  checkBackupReminder();
+  updateLastBackupInfo();
+}
+function daysSince(date){
+  return Math.floor((Date.now() - date.getTime()) / 86400000);
+}
+function fmtDateSrFromDate(d){
+  return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}.`;
+}
+function checkBackupReminder(){
+  const banner = document.getElementById('backupReminderBanner');
+  const textEl = document.getElementById('backupReminderText');
+  if(!banner || !textEl) return;
+  const last = getLastBackupDate();
+  const interval = getBackupIntervalDays();
+  if(!last){
+    textEl.textContent = 'Nikad nisi napravio bekap podataka.';
+    banner.style.display = 'flex';
+    return;
+  }
+  const d = daysSince(last);
+  if(d >= interval){
+    textEl.textContent = `Prošlo je ${d} dana od poslednjeg bekapa.`;
+    banner.style.display = 'flex';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+function updateLastBackupInfo(){
+  const el = document.getElementById('lastBackupInfo');
+  if(!el) return;
+  const last = getLastBackupDate();
+  el.textContent = last ? `Poslednji bekap: ${fmtDateSrFromDate(last)}` : 'Poslednji bekap: nikad';
+}
 
 function showToast(msg){
   const t = document.getElementById('toast');
@@ -1214,6 +1281,8 @@ function openSettings(){
   settingsBackdrop.classList.add('open');
   requestAnimationFrame(()=> settingsSheet.classList.add('open'));
   pushModalHistory(closeSettings);
+  document.getElementById('backupIntervalInput').value = getBackupIntervalDays();
+  updateLastBackupInfo();
 }
 function closeSettings(fromPop){
   settingsSheet.classList.remove('open');
@@ -1229,7 +1298,7 @@ document.getElementById('closeXsettings').addEventListener('click', () => closeS
 settingsBackdrop.addEventListener('click', () => closeSettings(false));
 
 // ---------- BACKUP: export ----------
-document.getElementById('exportBackupBtn').addEventListener('click', () => {
+function doExportBackup(){
   const payload = { exportedAt: new Date().toISOString(), items, sales };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
@@ -1241,7 +1310,20 @@ document.getElementById('exportBackupBtn').addEventListener('click', () => {
   a.click();
   a.remove();
   setTimeout(()=> URL.revokeObjectURL(url), 2000);
+  markBackupDone();
   showToast('Bekap sačuvan');
+}
+document.getElementById('exportBackupBtn').addEventListener('click', doExportBackup);
+
+document.getElementById('backupIntervalInput').addEventListener('input', (e) => {
+  const v = parseInt(e.target.value) || 7;
+  setBackupIntervalDays(v);
+  checkBackupReminder();
+});
+
+document.getElementById('backupReminderBtn').addEventListener('click', () => {
+  openSettings();
+  doExportBackup();
 });
 
 // ---------- BACKUP: import ----------
@@ -1443,6 +1525,7 @@ document.getElementById('closeXsa').addEventListener('click', () => closeSaSheet
 loadAll();
 renderStanje();
 renderProdaja();
+checkBackupReminder();
 </script>
 <script>
 if('serviceWorker' in navigator){
