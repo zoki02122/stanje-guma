@@ -193,10 +193,7 @@
       </div>
     </div>
     <div id="warnBanner">Podaci se ne čuvaju trajno u ovom prikazu (samo dok je otvoreno). Za trajno čuvanje aplikacija treba da bude postavljena kao pravi sajt ili otvorena kao preuzet fajl u Chrome-u.</div>
-  </header>
-
-  <main>
-    <div class="panel active" id="panel-stanje">
+    <div id="stanjeControls">
       <div class="search-dim">
         <div class="dim-inputs">
           <input type="number" id="sq_w" placeholder="" inputmode="numeric">
@@ -216,10 +213,8 @@
         <div class="chip" data-f="letnja">Letnja</div>
         <div class="chip" data-f="M+S">M+S</div>
       </div>
-      <div id="list"><div class="loading">Učitavanje...</div></div>
     </div>
-
-    <div class="panel" id="panel-prodaja">
+    <div id="prodajaControls" style="display:none;">
       <div class="chips" id="saleChips" style="margin-top:12px;">
         <div class="chip active" data-sf="sve">Sve</div>
         <div class="chip" data-sf="danas">Danas</div>
@@ -233,6 +228,15 @@
         </div>
         <button id="shareReportBtn">Podeli izveštaj</button>
       </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="panel active" id="panel-stanje">
+      <div id="list"><div class="loading">Učitavanje...</div></div>
+    </div>
+
+    <div class="panel" id="panel-prodaja">
       <div id="salesList"></div>
     </div>
   </main>
@@ -1153,6 +1157,8 @@ document.querySelectorAll('#viewToggle button').forEach(btn => {
     }
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     document.getElementById('panel-'+name).classList.add('active');
+    document.getElementById('stanjeControls').style.display = (name === 'stanje') ? '' : 'none';
+    document.getElementById('prodajaControls').style.display = (name === 'prodaja') ? '' : 'none';
   });
 });
 
