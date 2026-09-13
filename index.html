@@ -766,11 +766,10 @@ function wireBackspace(el, prev){
     }
   });
 
-  el.addEventListener('input', () => {
-    const original = fieldOriginal.get(el) ?? '';
+  el.addEventListener('input', (e) => {
     if(!pristineArmed.has(el)) return;
-    const trimmed = el.value.length < original.length && original.startsWith(el.value);
-    if(trimmed){
+    if(e.inputType === 'deleteContentBackward'){
+      const original = fieldOriginal.get(el) ?? '';
       el.value = original;
       goPrev();
       return;
@@ -907,6 +906,13 @@ const sCenaInput = document.getElementById('s_cena');
 sCenaInput.addEventListener('input', () => {
   sCenaInput.value = formatThousands(sCenaInput.value);
   updateSaleTotal();
+});
+sCenaInput.setAttribute('enterkeyhint', 'done');
+sCenaInput.addEventListener('keydown', (e) => {
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    document.getElementById('saleConfirmBtn').scrollIntoView({block:'center', behavior:'smooth'});
+  }
 });
 
 function openSaleModal(){
