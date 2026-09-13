@@ -747,7 +747,7 @@ function handleFocusSelect(el){
   pristineArmed.add(el);
 }
 
-function wireBackspace(el, prev){
+function wireBackspace(el, prev, onRestore){
   const goPrev = () => { if(prev) prev.focus(); };
 
   el.addEventListener('keydown', (e) => {
@@ -771,6 +771,7 @@ function wireBackspace(el, prev){
     if(e.inputType === 'deleteContentBackward'){
       const original = fieldOriginal.get(el) ?? '';
       el.value = original;
+      if(onRestore) onRestore();
       goPrev();
       return;
     }
@@ -961,8 +962,8 @@ function updateSaleTotal(){
   document.getElementById('s_ukupno').textContent = fmt(k*c) + ' din';
 }
 document.getElementById('s_kolicina').addEventListener('input', updateSaleTotal);
-wireBackspace(document.getElementById('s_kolicina'), null);
-wireBackspace(sCenaInput, document.getElementById('s_kolicina'));
+wireBackspace(document.getElementById('s_kolicina'), null, updateSaleTotal);
+wireBackspace(sCenaInput, document.getElementById('s_kolicina'), updateSaleTotal);
 document.getElementById('saleCancelBtn').addEventListener('click', () => closeSaleModal(false));
 saleBackdrop.addEventListener('click', () => closeSaleModal(false));
 
