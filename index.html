@@ -184,7 +184,7 @@
   <header>
     <div class="top">
       <div>
-        <h1>Stanje guma</h1>
+        <h1>Stanje guma <span style="font-size:12px; color:var(--muted); font-weight:400;">v23</span></h1>
         <div class="headerStats" id="stats">—</div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;">
@@ -712,15 +712,12 @@ function armExitTrap(){
     dbg('armExitTrap: skipped (already armed)');
   }
 }
-armExitTrap();
 document.addEventListener('pointerdown', function onceP(){
-  history.pushState({exitTrap:true}, '');
-  dbg('first pointerdown: safety pushState, history.length=' + history.length);
+  armExitTrap();
   document.removeEventListener('pointerdown', onceP);
 }, {once:true});
 document.addEventListener('keydown', function onceK(){
-  history.pushState({exitTrap:true}, '');
-  dbg('first keydown: safety pushState, history.length=' + history.length);
+  armExitTrap();
   document.removeEventListener('keydown', onceK);
 }, {once:true});
 
