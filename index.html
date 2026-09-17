@@ -684,9 +684,10 @@ function renderStanje(){
 }
 
 // ---------- MODALS (with back-button handling) ----------
-let modalHistoryPushed = false;
-let activeModalCloseFn = null;
+let modalStack = [];
+let programmaticNav = false;
 let exitTrapArmed = false;
+let exitConfirmed = false;
 
 function armExitTrap(){
   if(!exitTrapArmed){
@@ -697,17 +698,25 @@ function armExitTrap(){
 armExitTrap();
 
 function pushModalHistory(closeFn){
-  activeModalCloseFn = closeFn;
-  if(!modalHistoryPushed){
-    history.pushState({modal:true}, '');
-    modalHistoryPushed = true;
-  }
+  modalStack.push(closeFn);
+  history.pushState({modal:true}, '');
+}
+function popModalHistory(closeFn){
+  const idx = modalStack.lastIndexOf(closeFn);
+  if(idx !== -1) modalStack.splice(idx, 1);
+  programmaticNav = true;
+  history.back();
 }
 window.addEventListener('popstate', () => {
-  if(modalHistoryPushed && activeModalCloseFn){
-    modalHistoryPushed = false;
-    const fn = activeModalCloseFn;
-    activeModalCloseFn = null;
+  if(programmaticNav){
+    programmaticNav = false;
+    return;
+  }
+  if(exitConfirmed){
+    return;
+  }
+  if(modalStack.length > 0){
+    const fn = modalStack.pop();
     fn(true);
     return;
   }
@@ -727,7 +736,9 @@ function hideExitConfirm(){
 }
 document.getElementById('exitConfirmBtn').addEventListener('click', () => {
   hideExitConfirm();
+  exitConfirmed = true;
   history.back();
+  setTimeout(() => { try{ window.close(); }catch(e){} }, 50);
 });
 document.getElementById('exitCancelBtn').addEventListener('click', () => {
   hideExitConfirm();
@@ -746,10 +757,8 @@ function openSheet(){
 function closeSheet(fromPop){
   sheet.classList.remove('open');
   backdrop.classList.remove('open');
-  if(!fromPop && modalHistoryPushed){
-    modalHistoryPushed = false;
-    activeModalCloseFn = null;
-    history.back();
+  if(!fromPop){
+    popModalHistory(closeSheet);
   }
 }
 
@@ -969,10 +978,8 @@ function openSaleModal(){
 function closeSaleModal(fromPop){
   saleSheet.classList.remove('open');
   saleBackdrop.classList.remove('open');
-  if(!fromPop && modalHistoryPushed){
-    modalHistoryPushed = false;
-    activeModalCloseFn = null;
-    history.back();
+  if(!fromPop){
+    popModalHistory(closeSaleModal);
   }
 }
 
@@ -1149,10 +1156,8 @@ function openSaSheet(){
 function closeSaSheet(fromPop){
   saSheet.classList.remove('open');
   saBackdrop.classList.remove('open');
-  if(!fromPop && modalHistoryPushed){
-    modalHistoryPushed = false;
-    activeModalCloseFn = null;
-    history.back();
+  if(!fromPop){
+    popModalHistory(closeSaSheet);
   }
 }
 saBackdrop.addEventListener('click', () => closeSaSheet(false));
@@ -1218,10 +1223,8 @@ function openConfirmModal(){
 function closeConfirmModal(fromPop){
   confirmSheet.classList.remove('open');
   confirmBackdrop.classList.remove('open');
-  if(!fromPop && modalHistoryPushed){
-    modalHistoryPushed = false;
-    activeModalCloseFn = null;
-    history.back();
+  if(!fromPop){
+    popModalHistory(closeConfirmModal);
   }
 }
 function showConfirm(opts){
@@ -1342,10 +1345,8 @@ function openSettings(){
 function closeSettings(fromPop){
   settingsSheet.classList.remove('open');
   settingsBackdrop.classList.remove('open');
-  if(!fromPop && modalHistoryPushed){
-    modalHistoryPushed = false;
-    activeModalCloseFn = null;
-    history.back();
+  if(!fromPop){
+    popModalHistory(closeSettings);
   }
 }
 document.getElementById('settingsBtn').addEventListener('click', openSettings);
@@ -1500,10 +1501,8 @@ function openExcelChoice(){
 function closeExcelChoice(fromPop){
   excelChoiceSheet.classList.remove('open');
   excelChoiceBackdrop.classList.remove('open');
-  if(!fromPop && modalHistoryPushed){
-    modalHistoryPushed = false;
-    activeModalCloseFn = null;
-    history.back();
+  if(!fromPop){
+    popModalHistory(closeExcelChoice);
   }
 }
 document.getElementById('closeXexcel').addEventListener('click', () => { pendingExcelImport=null; closeExcelChoice(false); });
