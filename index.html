@@ -445,6 +445,8 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<div id="debugLog" style="display:none; position:fixed; left:6px; right:6px; bottom:6px; max-height:40vh; overflow-y:auto; background:rgba(0,0,0,0.9); color:#8f8; font-family:monospace; font-size:11px; line-height:1.4; padding:8px; border-radius:8px; z-index:9999; white-space:pre-wrap;"></div>
+<button id="debugToggleBtn" style="position:fixed; right:8px; bottom:8px; z-index:10000; background:#333; color:#fff; border:1px solid #555; border-radius:50%; width:36px; height:36px; font-size:16px;">🐞</button>
 
 <script>
 const LS_ITEMS = 'stanjeGuma_items_v1';
@@ -684,6 +686,18 @@ function renderStanje(){
 }
 
 // ---------- MODALS (with back-button handling) ----------
+const debugLogEl = document.getElementById('debugLog');
+const debugToggleBtn = document.getElementById('debugToggleBtn');
+function dbg(msg){
+  const t = new Date().toISOString().slice(11,23);
+  debugLogEl.textContent += `[${t}] ${msg}\n`;
+  debugLogEl.scrollTop = debugLogEl.scrollHeight;
+}
+debugToggleBtn.addEventListener('click', () => {
+  debugLogEl.style.display = debugLogEl.style.display === 'none' ? 'block' : 'none';
+});
+dbg('--- page loaded, history.length=' + history.length + ' ---');
+
 let modalStack = [];
 let programmaticNav = false;
 let exitTrapArmed = false;
@@ -693,41 +707,53 @@ function armExitTrap(){
   if(!exitTrapArmed){
     history.pushState({exitTrap:true}, '');
     exitTrapArmed = true;
+    dbg('armExitTrap: pushed exitTrap, history.length=' + history.length);
+  } else {
+    dbg('armExitTrap: skipped (already armed)');
   }
 }
 armExitTrap();
 document.addEventListener('pointerdown', function onceP(){
   history.pushState({exitTrap:true}, '');
+  dbg('first pointerdown: safety pushState, history.length=' + history.length);
   document.removeEventListener('pointerdown', onceP);
 }, {once:true});
 document.addEventListener('keydown', function onceK(){
   history.pushState({exitTrap:true}, '');
+  dbg('first keydown: safety pushState, history.length=' + history.length);
   document.removeEventListener('keydown', onceK);
 }, {once:true});
 
 function pushModalHistory(closeFn){
   modalStack.push(closeFn);
   history.pushState({modal:true}, '');
+  dbg('pushModalHistory(' + (closeFn.name||'?') + '), stack=' + modalStack.length + ', history.length=' + history.length);
 }
 function popModalHistory(closeFn){
   const idx = modalStack.lastIndexOf(closeFn);
   if(idx !== -1) modalStack.splice(idx, 1);
   programmaticNav = true;
+  dbg('popModalHistory(' + (closeFn.name||'?') + '), stack=' + modalStack.length + ' -> calling history.back()');
   history.back();
 }
-window.addEventListener('popstate', () => {
+window.addEventListener('popstate', (e) => {
+  dbg('POPSTATE fired. state=' + JSON.stringify(e.state) + ' history.length=' + history.length + ' programmaticNav=' + programmaticNav + ' exitConfirmed=' + exitConfirmed + ' modalStack=' + modalStack.length + ' exitTrapArmed=' + exitTrapArmed);
   if(programmaticNav){
     programmaticNav = false;
+    dbg('  -> was programmatic, ignoring');
     return;
   }
   if(exitConfirmed){
+    dbg('  -> exitConfirmed already true, letting it exit');
     return;
   }
   if(modalStack.length > 0){
     const fn = modalStack.pop();
+    dbg('  -> closing top modal: ' + (fn.name||'?'));
     fn(true);
     return;
   }
+  dbg('  -> showing exit confirm dialog');
   exitTrapArmed = false;
   showExitConfirm();
 });
@@ -743,12 +769,17 @@ function hideExitConfirm(){
   exitBackdrop.classList.remove('open');
 }
 document.getElementById('exitConfirmBtn').addEventListener('click', () => {
+  dbg('IZAĐI clicked. history.length before=' + history.length);
   hideExitConfirm();
   exitConfirmed = true;
   history.back();
-  setTimeout(() => { try{ window.close(); }catch(e){} }, 50);
+  setTimeout(() => {
+    dbg('  +50ms after Izađi: history.length=' + history.length + ' (still here means back() had nothing to go to)');
+    try{ window.close(); }catch(e){}
+  }, 50);
 });
 document.getElementById('exitCancelBtn').addEventListener('click', () => {
+  dbg('OSTANI clicked');
   hideExitConfirm();
   armExitTrap();
 });
