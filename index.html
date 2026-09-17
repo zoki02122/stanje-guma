@@ -696,6 +696,14 @@ function armExitTrap(){
   }
 }
 armExitTrap();
+document.addEventListener('pointerdown', function onceP(){
+  history.pushState({exitTrap:true}, '');
+  document.removeEventListener('pointerdown', onceP);
+}, {once:true});
+document.addEventListener('keydown', function onceK(){
+  history.pushState({exitTrap:true}, '');
+  document.removeEventListener('keydown', onceK);
+}, {once:true});
 
 function pushModalHistory(closeFn){
   modalStack.push(closeFn);
