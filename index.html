@@ -151,6 +151,11 @@
   .seg button.on{background:var(--amber-dim);border-color:var(--amber-border);color:var(--amber-soft);box-shadow:var(--amber-depth-shadow);}
 
   .sheet-actions{display:flex;gap:10px;margin-top:18px;}
+
+  .exit-modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50;display:none;}
+  .exit-modal-backdrop.open{display:block;}
+  .exit-modal{position:fixed;left:50%;top:42%;transform:translate(-50%,-50%);width:calc(100% - 48px);max-width:380px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:26px 22px;z-index:51;text-align:center;}
+  .exit-modal h2{margin:0 0 8px;font-size:22px;}
   .sheet-actions.stack{flex-direction:column;}
   .btn{flex:1;padding:13px;border-radius:10px;border:none;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;}
   .btn.primary{background:var(--amber-dim);color:var(--amber-soft);border:1px solid var(--amber-border);box-shadow:var(--amber-depth-shadow);}
@@ -182,6 +187,17 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
+<div class="exit-modal-backdrop" id="exitBackdrop">
+  <div class="exit-modal">
+    <div style="font-size:128px;line-height:1;margin-bottom:10px;">🚪</div>
+    <h2>Izlazak iz aplikacije</h2>
+    <div class="sub">Da li sigurno želiš da izađeš?</div>
+    <div class="sheet-actions">
+      <button class="btn ghost" id="exitStayBtn"><span style="font-size:44px;vertical-align:-14px;margin-right:6px;">↩️</span>Ostani</button>
+      <button class="btn danger" id="exitLeaveBtn"><span style="font-size:44px;vertical-align:-14px;margin-right:6px;">🚪</span>Izađi</button>
+    </div>
+  </div>
+</div>
 <div id="app">
   <header>
     <div class="top">
@@ -679,13 +695,50 @@ function pushModalHistory(closeFn){
     modalHistoryPushed = true;
   }
 }
+let suppressPopstateCount = 0;
 window.addEventListener('popstate', () => {
+  if(suppressPopstateCount>0){ suppressPopstateCount--; return; }
+  if(exitConfirmed){ return; }
   if(modalHistoryPushed && activeModalCloseFn){
     modalHistoryPushed = false;
     const fn = activeModalCloseFn;
     activeModalCloseFn = null;
     fn(true);
+    return;
   }
+  exitTrapArmed = false;
+  showExitConfirm();
+});
+
+// ---------- EXIT CONFIRMATION ----------
+let exitTrapArmed = false;
+let exitConfirmed = false;
+function armExitTrap(){
+  if(!exitTrapArmed){
+    try{ history.pushState({exitTrap:true}, '', location.href); }catch(e){}
+    exitTrapArmed = true;
+  }
+}
+document.addEventListener('pointerdown', function onceP(){
+  armExitTrap();
+  document.removeEventListener('pointerdown', onceP);
+}, {once:true});
+document.addEventListener('keydown', function onceK(){
+  armExitTrap();
+  document.removeEventListener('keydown', onceK);
+}, {once:true});
+const exitBackdropEl = document.getElementById('exitBackdrop');
+function showExitConfirm(){ exitBackdropEl.classList.add('open'); }
+function hideExitConfirm(){ exitBackdropEl.classList.remove('open'); }
+document.getElementById('exitLeaveBtn').addEventListener('click', () => {
+  hideExitConfirm();
+  exitConfirmed = true;
+  history.back();
+  setTimeout(() => { try{ window.close(); }catch(e){} }, 50);
+});
+document.getElementById('exitStayBtn').addEventListener('click', () => {
+  hideExitConfirm();
+  armExitTrap();
 });
 
 const sheet = document.getElementById('sheet');
@@ -703,6 +756,7 @@ function closeSheet(fromPop){
   if(!fromPop && modalHistoryPushed){
     modalHistoryPushed = false;
     activeModalCloseFn = null;
+    suppressPopstateCount++;
     history.back();
   }
 }
@@ -926,6 +980,7 @@ function closeSaleModal(fromPop){
   if(!fromPop && modalHistoryPushed){
     modalHistoryPushed = false;
     activeModalCloseFn = null;
+    suppressPopstateCount++;
     history.back();
   }
 }
@@ -1106,6 +1161,7 @@ function closeSaSheet(fromPop){
   if(!fromPop && modalHistoryPushed){
     modalHistoryPushed = false;
     activeModalCloseFn = null;
+    suppressPopstateCount++;
     history.back();
   }
 }
@@ -1175,6 +1231,7 @@ function closeConfirmModal(fromPop){
   if(!fromPop && modalHistoryPushed){
     modalHistoryPushed = false;
     activeModalCloseFn = null;
+    suppressPopstateCount++;
     history.back();
   }
 }
@@ -1291,6 +1348,7 @@ function closeSettings(fromPop){
   if(!fromPop && modalHistoryPushed){
     modalHistoryPushed = false;
     activeModalCloseFn = null;
+    suppressPopstateCount++;
     history.back();
   }
 }
@@ -1449,6 +1507,7 @@ function closeExcelChoice(fromPop){
   if(!fromPop && modalHistoryPushed){
     modalHistoryPushed = false;
     activeModalCloseFn = null;
+    suppressPopstateCount++;
     history.back();
   }
 }
