@@ -685,28 +685,25 @@ function renderStanje(){
   });
 }
 
-// ---------- MODALS (with back-button handling) ----------
-let modalHistoryPushed = false;
-let activeModalCloseFn = null;
-
-function pushModalHistory(closeFn){
-  activeModalCloseFn = closeFn;
-  if(!modalHistoryPushed){
-    history.pushState({modal:true}, '');
-    modalHistoryPushed = true;
-  }
-}
+// ---------- OVERLAY STACK (da dugme/gest "nazad" zatvara prozorčić umesto da napusti stranicu) ----------
+let overlayStack = [];
 let suppressPopstateCount = 0;
+function pushOverlay(removeFn){
+  overlayStack.push(removeFn);
+  try{ history.pushState({ovl:true}, '', location.href); }catch(e){}
+}
+function closeOverlay(removeFn){
+  const idx = overlayStack.lastIndexOf(removeFn);
+  if(idx!==-1) overlayStack.splice(idx,1);
+  removeFn();
+  suppressPopstateCount++;
+  try{ history.back(); }catch(e){ suppressPopstateCount--; }
+}
 window.addEventListener('popstate', () => {
   if(suppressPopstateCount>0){ suppressPopstateCount--; return; }
   if(exitConfirmed){ return; }
-  if(modalHistoryPushed && activeModalCloseFn){
-    modalHistoryPushed = false;
-    const fn = activeModalCloseFn;
-    activeModalCloseFn = null;
-    fn(true);
-    return;
-  }
+  const fn = overlayStack.pop();
+  if(fn){ fn(); return; }
   exitTrapArmed = false;
   showExitConfirm();
 });
@@ -749,17 +746,11 @@ const tipSeg = document.getElementById('tipSeg');
 function openSheet(){
   backdrop.classList.add('open');
   requestAnimationFrame(()=> sheet.classList.add('open'));
-  pushModalHistory(closeSheet);
+  pushOverlay(closeSheet);
 }
-function closeSheet(fromPop){
+function closeSheet(){
   sheet.classList.remove('open');
   backdrop.classList.remove('open');
-  if(!fromPop && modalHistoryPushed){
-    modalHistoryPushed = false;
-    activeModalCloseFn = null;
-    suppressPopstateCount++;
-    history.back();
-  }
 }
 
 function setTip(v){
@@ -904,8 +895,8 @@ function openEdit(id){
 }
 
 document.getElementById('addBtn').addEventListener('click', openAdd);
-document.getElementById('cancelBtn').addEventListener('click', () => closeSheet(false));
-backdrop.addEventListener('click', () => closeSheet(false));
+document.getElementById('cancelBtn').addEventListener('click', () => closeOverlay(closeSheet));
+backdrop.addEventListener('click', () => closeOverlay(closeSheet));
 
 document.getElementById('saveBtn').addEventListener('click', () => {
   const dimW = document.getElementById('f_dim_w').value.trim();
@@ -932,7 +923,7 @@ document.getElementById('saveBtn').addEventListener('click', () => {
   }
   persistItems();
   renderStanje();
-  closeSheet(false);
+  closeOverlay(closeSheet);
   showToast('Sačuvano');
 });
 
@@ -947,7 +938,7 @@ document.getElementById('deleteBtn').addEventListener('click', () => {
       items = items.filter(i => i.id !== editingId);
       persistItems();
       renderStanje();
-      closeSheet(false);
+      closeOverlay(closeSheet);
       showToast('Obrisano');
     }
   });
@@ -973,17 +964,11 @@ sCenaInput.addEventListener('keydown', (e) => {
 function openSaleModal(){
   saleBackdrop.classList.add('open');
   requestAnimationFrame(()=> saleSheet.classList.add('open'));
-  pushModalHistory(closeSaleModal);
+  pushOverlay(closeSaleModal);
 }
-function closeSaleModal(fromPop){
+function closeSaleModal(){
   saleSheet.classList.remove('open');
   saleBackdrop.classList.remove('open');
-  if(!fromPop && modalHistoryPushed){
-    modalHistoryPushed = false;
-    activeModalCloseFn = null;
-    suppressPopstateCount++;
-    history.back();
-  }
 }
 
 function parseFirstNumber(str){
@@ -1019,8 +1004,8 @@ function updateSaleTotal(){
 document.getElementById('s_kolicina').addEventListener('input', updateSaleTotal);
 wireBackspace(document.getElementById('s_kolicina'), null, updateSaleTotal);
 wireBackspace(sCenaInput, document.getElementById('s_kolicina'), updateSaleTotal);
-document.getElementById('saleCancelBtn').addEventListener('click', () => closeSaleModal(false));
-saleBackdrop.addEventListener('click', () => closeSaleModal(false));
+document.getElementById('saleCancelBtn').addEventListener('click', () => closeOverlay(closeSaleModal));
+saleBackdrop.addEventListener('click', () => closeOverlay(closeSaleModal));
 
 document.getElementById('saleConfirmBtn').addEventListener('click', () => {
   const item = items.find(i => i.id === sellingId);
@@ -1046,7 +1031,7 @@ document.getElementById('saleConfirmBtn').addEventListener('click', () => {
 
   renderStanje();
   renderProdaja();
-  closeSaleModal(false);
+  closeOverlay(closeSaleModal);
   showToast('Prodato');
 });
 
@@ -1154,19 +1139,13 @@ const saBackdrop = document.getElementById('saBackdrop');
 function openSaSheet(){
   saBackdrop.classList.add('open');
   requestAnimationFrame(()=> saSheet.classList.add('open'));
-  pushModalHistory(closeSaSheet);
+  pushOverlay(closeSaSheet);
 }
-function closeSaSheet(fromPop){
+function closeSaSheet(){
   saSheet.classList.remove('open');
   saBackdrop.classList.remove('open');
-  if(!fromPop && modalHistoryPushed){
-    modalHistoryPushed = false;
-    activeModalCloseFn = null;
-    suppressPopstateCount++;
-    history.back();
-  }
 }
-saBackdrop.addEventListener('click', () => closeSaSheet(false));
+saBackdrop.addEventListener('click', () => closeOverlay(closeSaSheet));
 
 function openSaleActions(id){
   const r = sales.find(s => s.id === id);
@@ -1180,7 +1159,7 @@ function openSaleActions(id){
 document.getElementById('saShareBtn').addEventListener('click', () => {
   const r = sales.find(s => s.id === saActionId);
   if(r) shareSale(r);
-  closeSaSheet(false);
+  closeOverlay(closeSaSheet);
 });
 document.getElementById('saDeleteBtn').addEventListener('click', () => {
   showConfirm({
@@ -1192,7 +1171,7 @@ document.getElementById('saDeleteBtn').addEventListener('click', () => {
       sales = sales.filter(s => s.id !== saActionId);
       persistSales();
       renderProdaja();
-      closeSaSheet(false);
+      closeOverlay(closeSaSheet);
       showToast('Trajno obrisano');
     }
   });
@@ -1210,7 +1189,7 @@ document.getElementById('saRestoreBtn').addEventListener('click', () => {
       persistSales();
       renderProdaja();
       renderStanje();
-      closeSaSheet(false);
+      closeOverlay(closeSaSheet);
       showToast('Vraćeno na stanje');
     }
   });
@@ -1224,17 +1203,11 @@ let confirmCallback = null;
 function openConfirmModal(){
   confirmBackdrop.classList.add('open');
   requestAnimationFrame(()=> confirmSheet.classList.add('open'));
-  pushModalHistory(closeConfirmModal);
+  pushOverlay(closeConfirmModal);
 }
-function closeConfirmModal(fromPop){
+function closeConfirmModal(){
   confirmSheet.classList.remove('open');
   confirmBackdrop.classList.remove('open');
-  if(!fromPop && modalHistoryPushed){
-    modalHistoryPushed = false;
-    activeModalCloseFn = null;
-    suppressPopstateCount++;
-    history.back();
-  }
 }
 function showConfirm(opts){
   document.getElementById('confirmTitle').textContent = opts.title || 'Potvrda';
@@ -1249,20 +1222,20 @@ function showConfirm(opts){
 document.getElementById('confirmOkBtn').addEventListener('click', () => {
   const cb = confirmCallback;
   confirmCallback = null;
-  closeConfirmModal(false);
+  closeOverlay(closeConfirmModal);
   if(cb) cb();
 });
 document.getElementById('confirmCancelBtn').addEventListener('click', () => {
   confirmCallback = null;
-  closeConfirmModal(false);
+  closeOverlay(closeConfirmModal);
 });
 document.getElementById('closeXconfirm').addEventListener('click', () => {
   confirmCallback = null;
-  closeConfirmModal(false);
+  closeOverlay(closeConfirmModal);
 });
 confirmBackdrop.addEventListener('click', () => {
   confirmCallback = null;
-  closeConfirmModal(false);
+  closeOverlay(closeConfirmModal);
 });
 
 // ---------- HEADER TOGGLE ----------
@@ -1326,14 +1299,17 @@ function wireSearchDim(el, key, next, maxLen){
     if(key === 'w') dimQueryW = v;
     if(key === 'p') dimQueryP = v;
     if(key === 'r') dimQueryR = v;
-    if(v.length >= maxLen && next) next.focus();
+    if(v.length >= maxLen){
+      if(next) next.focus();
+      else el.blur();
+    }
     renderStanje();
   });
   el.addEventListener('focus', () => handleFocusSelect(el));
 }
 wireSearchDim(sqW, 'w', sqP, 3);
 wireSearchDim(sqP, 'p', sqR, 2);
-wireSearchDim(sqR, 'r', document.getElementById('searchInput'), 2);
+wireSearchDim(sqR, 'r', null, 2);
 wireBackspace(sqP, sqW);
 wireBackspace(sqR, sqP);
 wireBackspace(document.getElementById('searchInput'), sqR);
@@ -1347,23 +1323,17 @@ const settingsBackdrop = document.getElementById('settingsBackdrop');
 function openSettings(){
   settingsBackdrop.classList.add('open');
   requestAnimationFrame(()=> settingsSheet.classList.add('open'));
-  pushModalHistory(closeSettings);
+  pushOverlay(closeSettings);
   document.getElementById('backupIntervalInput').value = getBackupIntervalDays();
   updateLastBackupInfo();
 }
-function closeSettings(fromPop){
+function closeSettings(){
   settingsSheet.classList.remove('open');
   settingsBackdrop.classList.remove('open');
-  if(!fromPop && modalHistoryPushed){
-    modalHistoryPushed = false;
-    activeModalCloseFn = null;
-    suppressPopstateCount++;
-    history.back();
-  }
 }
 document.getElementById('settingsBtn').addEventListener('click', openSettings);
-document.getElementById('closeXsettings').addEventListener('click', () => closeSettings(false));
-settingsBackdrop.addEventListener('click', () => closeSettings(false));
+document.getElementById('closeXsettings').addEventListener('click', () => closeOverlay(closeSettings));
+settingsBackdrop.addEventListener('click', () => closeOverlay(closeSettings));
 
 // ---------- BACKUP: export ----------
 function doExportBackup(){
@@ -1415,7 +1385,7 @@ document.getElementById('importBackupInput').addEventListener('change', (e) => {
           persistSales();
           renderStanje();
           renderProdaja();
-          closeSettings(false);
+          closeOverlay(closeSettings);
           showToast('Bekap uvezen');
         }
       });
@@ -1508,21 +1478,15 @@ const excelChoiceBackdrop = document.getElementById('excelChoiceBackdrop');
 function openExcelChoice(){
   excelChoiceBackdrop.classList.add('open');
   requestAnimationFrame(()=> excelChoiceSheet.classList.add('open'));
-  pushModalHistory(closeExcelChoice);
+  pushOverlay(closeExcelChoice);
 }
-function closeExcelChoice(fromPop){
+function closeExcelChoice(){
   excelChoiceSheet.classList.remove('open');
   excelChoiceBackdrop.classList.remove('open');
-  if(!fromPop && modalHistoryPushed){
-    modalHistoryPushed = false;
-    activeModalCloseFn = null;
-    suppressPopstateCount++;
-    history.back();
-  }
 }
-document.getElementById('closeXexcel').addEventListener('click', () => { pendingExcelImport=null; closeExcelChoice(false); });
-excelChoiceBackdrop.addEventListener('click', () => { pendingExcelImport=null; closeExcelChoice(false); });
-document.getElementById('excelCancelBtn').addEventListener('click', () => { pendingExcelImport=null; closeExcelChoice(false); });
+document.getElementById('closeXexcel').addEventListener('click', () => { pendingExcelImport=null; closeOverlay(closeExcelChoice); });
+excelChoiceBackdrop.addEventListener('click', () => { pendingExcelImport=null; closeOverlay(closeExcelChoice); });
+document.getElementById('excelCancelBtn').addEventListener('click', () => { pendingExcelImport=null; closeOverlay(closeExcelChoice); });
 document.getElementById('excelReplaceBtn').addEventListener('click', () => {
   if(!pendingExcelImport) return;
   items = pendingExcelImport;
@@ -1530,8 +1494,8 @@ document.getElementById('excelReplaceBtn').addEventListener('click', () => {
   renderStanje();
   const n = pendingExcelImport.length;
   pendingExcelImport = null;
-  closeExcelChoice(false);
-  closeSettings(false);
+  closeOverlay(closeExcelChoice);
+  closeOverlay(closeSettings);
   showToast(`Uvezeno ${n} guma`);
 });
 document.getElementById('excelAppendBtn').addEventListener('click', () => {
@@ -1541,8 +1505,8 @@ document.getElementById('excelAppendBtn').addEventListener('click', () => {
   renderStanje();
   const n = pendingExcelImport.length;
   pendingExcelImport = null;
-  closeExcelChoice(false);
-  closeSettings(false);
+  closeOverlay(closeExcelChoice);
+  closeOverlay(closeSettings);
   showToast(`Uvezeno ${n} guma`);
 });
 
@@ -1557,7 +1521,7 @@ document.getElementById('wipeItemsBtn').addEventListener('click', () => {
       items = [];
       persistItems();
       renderStanje();
-      closeSettings(false);
+      closeOverlay(closeSettings);
       showToast('Stanje obrisano');
     }
   });
@@ -1572,7 +1536,7 @@ document.getElementById('wipeSalesBtn').addEventListener('click', () => {
       sales = [];
       persistSales();
       renderProdaja();
-      closeSettings(false);
+      closeOverlay(closeSettings);
       showToast('Istorija prodaje obrisana');
     }
   });
@@ -1586,9 +1550,9 @@ document.querySelectorAll('#sheet input, #sheet textarea, #saleSheet input').for
 });
 
 // ---------- CLOSE X BUTTONS ----------
-document.getElementById('closeXmain').addEventListener('click', () => closeSheet(false));
-document.getElementById('closeXsale').addEventListener('click', () => closeSaleModal(false));
-document.getElementById('closeXsa').addEventListener('click', () => closeSaSheet(false));
+document.getElementById('closeXmain').addEventListener('click', () => closeOverlay(closeSheet));
+document.getElementById('closeXsale').addEventListener('click', () => closeOverlay(closeSaleModal));
+document.getElementById('closeXsa').addEventListener('click', () => closeOverlay(closeSaSheet));
 
 // ---------- INIT ----------
 loadAll();
