@@ -976,6 +976,7 @@ function renderStanje(){
 }
 
 // ---------- OVERLAY STACK (da dugme/gest "nazad" zatvara prozorčić umesto da napusti stranicu) ----------
+try{ history.scrollRestoration = 'manual'; }catch(e){}
 let overlayStack = [];
 let suppressPopstateCount = 0;
 function pushOverlay(removeFn){
@@ -1052,6 +1053,14 @@ function openSheet(){
   backdrop.classList.add('open');
   requestAnimationFrame(()=> sheet.classList.add('open'));
   pushOverlay(closeSheet);
+}
+// Prikaže karticu gume odmah ispod zaglavlja (bez animacije i bez isticanja): sačuvana guma je jednostavno na ekranu.
+function revealCard(id){
+  const card = document.querySelector('#list .card[data-id="'+id+'"]');
+  if(!card) return;
+  const head = document.querySelector('header');
+  const y = window.scrollY + card.getBoundingClientRect().top - head.getBoundingClientRect().bottom - 12;
+  window.scrollTo(0, Math.max(0, y));
 }
 function blurInside(el){ const a = document.activeElement; if(a && el.contains(a) && a.blur) a.blur(); }
 function closeSheet(){
@@ -1223,17 +1232,21 @@ document.getElementById('saveBtn').addEventListener('click', () => {
     napomena: document.getElementById('f_napomena').value.trim(),
   };
   const isNew = !editingId;
+  let savedId = editingId;
   if(editingId){
     const idx = items.findIndex(i => i.id === editingId);
     items[idx] = {...items[idx], ...data};
   } else {
-    items.unshift({id: uid(), ...data});
+    savedId = uid();
+    items.unshift({id: savedId, ...data});
   }
   persistItems();
-  renderStanje();
+  // sačuvana guma mora da se vidi: ako je trenutni filter/pretraga skriva, filter se skloni
+  if(!matchesFilter(items.find(i => i.id === savedId))) resetStanjeSearch(); else renderStanje();
   closeOverlay(closeSheet);
   const opis = [data.dimenzije, data.proizvodjac].filter(Boolean).join(' · ');
   showToast((isNew ? 'Dodato na stanje: ' : 'Izmene sačuvane: ') + opis, 5000);
+  revealCard(savedId);
 });
 
 document.getElementById('deleteBtn').addEventListener('click', () => {
