@@ -212,8 +212,22 @@
   .total-line .n{font-family:var(--font-num);font-size:26px;font-weight:700;color:var(--hi-text);}
   .total-line .l{font-size:12px;color:var(--muted);}
 
-  .toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:var(--surface-2);border:1px solid var(--line);color:var(--text);padding:10px 18px;border-radius:999px;font-size:14px;z-index:40;opacity:0;transition:opacity .2s;pointer-events:none;max-width:85%;text-align:center;}
-  .toast.show{opacity:1;}
+  /* Obaveštenje (kao u Arhivi): uvek gore, osenčeno bojom teme, kvačica levo; dodir ga ne zatvara, propušta dodir i nestaje samo.
+     Dok stoji, glavni ekran i Podešavanja se spuste za jedan red (body.noting), da ništa ne bude zaklonjeno. */
+  :root{--note-c:var(--amber);--note-h:54px;}
+  .note-top{display:none;position:fixed;top:0;left:0;right:0;z-index:60;padding:calc(8px + env(safe-area-inset-top)) 12px 0;height:calc(var(--note-h) + env(safe-area-inset-top));box-sizing:border-box;background:var(--bg);pointer-events:none;}
+  .note-top.on{display:block;}
+  .app-version{text-align:center;color:var(--muted);font-size:13px;margin:22px 0 6px;}
+  .note-bar{max-width:616px;margin:0 auto;height:46px;box-sizing:border-box;display:flex;align-items:center;gap:9px;padding:0 12px;border-radius:12px;background:color-mix(in srgb, var(--note-c) 22%, var(--bg));border:1px solid color-mix(in srgb, var(--note-c) 45%, var(--bg));color:var(--text);font-size:15px;line-height:1.25;overflow:hidden;}
+  .note-bar svg{flex:none;color:var(--note-c);}
+  .note-bar.warn{--note-c:var(--red);}
+  .note-bar span{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+  body.noting #app{padding-top:var(--note-h);}
+  body.noting header{top:var(--note-h);}
+  body.noting .settings-screen{padding-top:var(--note-h);}
+  body.noting .set-header{top:var(--note-h);}
+  :is([data-theme="ponoc"],[data-theme="ponoc-srebro"]){--note-c:var(--accent);}
+  :is([data-theme="banka"],[data-theme="koza"]){--note-c:var(--hi-text);}
 
   .loading{padding:60px 20px;text-align:center;color:var(--muted);}
   .dim-inputs{display:flex;align-items:center;gap:5px;}
@@ -360,7 +374,7 @@ html[data-theme="ponoc-srebro"]{ --alu-text:linear-gradient(180deg,#D3D8DE 0%,#A
 :is([data-theme="ponoc"],[data-theme="ponoc-srebro"]) .btn.amber{background:#000;border:1px solid var(--accent-deep);color:var(--num-hi);box-shadow:none;}
 :is([data-theme="ponoc"],[data-theme="ponoc-srebro"]) .total-line{background:#000;}
 :is([data-theme="ponoc"],[data-theme="ponoc-srebro"]) .total-line .n{font-weight:600;}
-:is([data-theme="ponoc"],[data-theme="ponoc-srebro"]) :is(.toast,.exit-modal){background:var(--card-shine), var(--surface);border:1px solid var(--line);}
+:is([data-theme="ponoc"],[data-theme="ponoc-srebro"]) .exit-modal{background:var(--card-shine), var(--surface);border:1px solid var(--line);}
 :is([data-theme="ponoc"],[data-theme="ponoc-srebro"]) :is(#backupReminderBanner,#warnBanner){background:var(--card-shine), var(--surface);border:1px solid var(--red);color:var(--text);}
 :is([data-theme="ponoc"],[data-theme="ponoc-srebro"]) #backupReminderBtn{background:#000;border:1px solid var(--red);color:var(--red);}
 /* podešavanja */
@@ -435,7 +449,6 @@ html[data-theme="banka"]{
 [data-theme="banka"] .summary-bar button{background:transparent;border:1px solid rgba(212,178,110,.6);color:#E8CE92;box-shadow:none;}
 [data-theme="banka"] .fab{background:linear-gradient(140deg,#16365F,#0E2747);color:#E8CE92;border:none;box-shadow:inset 0 0 0 1.5px rgba(212,178,110,.7), 0 10px 22px -8px rgba(14,39,71,.55);}
 [data-theme="banka"] .total-line{background:#FBF8F1;border-color:#E6D6B0;}
-[data-theme="banka"] .toast{background:#18202E;border-color:#18202E;color:#FFFFFF;}
 [data-theme="banka"] .set-tile.danger .tile-title{color:var(--red);}
 
 /* ================= TEMA: KOŽNI ROKOVNIK ================= */
@@ -469,7 +482,6 @@ html[data-theme="koza"]{
 [data-theme="koza"] .total-line{background:#F4ECDA;border-color:#D9C49A;}
 [data-theme="koza"] .total-line .n{color:#7A2331;}
 [data-theme="koza"] .sale-row .sr-total{color:#7A2331;}
-[data-theme="koza"] .toast{background:#1F3A2E;border-color:#1F3A2E;color:#EAD6A2;}
 
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -698,7 +710,7 @@ html[data-theme="koza"]{
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="note-top" id="noteTop" role="status" aria-live="polite"></div>
 
 <script>
 const LS_ITEMS = 'stanjeGuma_items_v1';
@@ -822,12 +834,38 @@ function updateLastBackupInfo(){
   el.textContent = last ? `Poslednji bekap: ${fmtDateSrFromDate(last)}` : 'Poslednji bekap: nikad';
 }
 
-function showToast(msg){
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), 1800);
+// Obaveštenje gore (isti način kao Arhiva): stoji ms (podrazumevano 4 s) i samo nestane. Dodir ga ne zatvara.
+// Ako vreme istekne dok je prst na ekranu, čeka da se prst podigne (da se sadržaj ne pomeri pod prstom).
+let _note = null, _noteTimer = null, _noteWait = false, _ptrDown = 0;
+const NOTE_WARN_RE = /^(Unesi|Upozorenje|Greška|Nema |Nisu |Nije |Fajl nije|Deljenje nije)/;
+function showToast(msg, ms){
+  _note = {text: String(msg), warn: NOTE_WARN_RE.test(String(msg))};
+  clearTimeout(_noteTimer); _noteWait = false;
+  _noteTimer = setTimeout(noteTimeUp, ms || 4000);
+  renderNote();
 }
+function noteTimeUp(){ if(_ptrDown > 0){ _noteWait = true; return; } hideNote(); }
+function hideNote(){ _note = null; clearTimeout(_noteTimer); _noteWait = false; renderNote(); }
+function renderNote(){
+  const top = document.getElementById('noteTop');
+  top.innerHTML = '';
+  top.classList.toggle('on', !!_note);
+  document.body.classList.toggle('noting', !!_note);
+  if(!_note) return;
+  const bar = document.createElement('div');
+  bar.className = 'note-bar' + (_note.warn ? ' warn' : '');
+  bar.innerHTML = (_note.warn
+    ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"></circle><line x1="12" y1="7.5" x2="12" y2="13"></line><line x1="12" y1="16.5" x2="12.01" y2="16.5"></line></svg>'
+    : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>')
+    + '<span></span>';
+  bar.querySelector('span').textContent = _note.text;
+  top.appendChild(bar);
+}
+document.addEventListener('pointerdown', ()=>{ _ptrDown++; }, true);
+['pointerup','pointercancel'].forEach(ev => document.addEventListener(ev, ()=>{
+  _ptrDown = Math.max(0, _ptrDown - 1);
+  if(_ptrDown === 0 && _noteWait) hideNote();
+}, true));
 
 function badgeLabel(tip){ return tip ? tip : '—'; }
 function escapeHtml(s){
@@ -1015,7 +1053,9 @@ function openSheet(){
   requestAnimationFrame(()=> sheet.classList.add('open'));
   pushOverlay(closeSheet);
 }
+function blurInside(el){ const a = document.activeElement; if(a && el.contains(a) && a.blur) a.blur(); }
 function closeSheet(){
+  blurInside(sheet);
   sheet.classList.remove('open');
   backdrop.classList.remove('open');
 }
@@ -1182,6 +1222,7 @@ document.getElementById('saveBtn').addEventListener('click', () => {
     cena: document.getElementById('f_cena').value.trim(),
     napomena: document.getElementById('f_napomena').value.trim(),
   };
+  const isNew = !editingId;
   if(editingId){
     const idx = items.findIndex(i => i.id === editingId);
     items[idx] = {...items[idx], ...data};
@@ -1191,7 +1232,8 @@ document.getElementById('saveBtn').addEventListener('click', () => {
   persistItems();
   renderStanje();
   closeOverlay(closeSheet);
-  showToast('Sačuvano');
+  const opis = [data.dimenzije, data.proizvodjac].filter(Boolean).join(' · ');
+  showToast((isNew ? 'Dodato na stanje: ' : 'Izmene sačuvane: ') + opis, 5000);
 });
 
 document.getElementById('deleteBtn').addEventListener('click', () => {
@@ -1234,6 +1276,7 @@ function openSaleModal(){
   pushOverlay(closeSaleModal);
 }
 function closeSaleModal(){
+  blurInside(saleSheet);
   saleSheet.classList.remove('open');
   saleBackdrop.classList.remove('open');
 }
@@ -1409,6 +1452,7 @@ function openSaSheet(){
   pushOverlay(closeSaSheet);
 }
 function closeSaSheet(){
+  blurInside(saSheet);
   saSheet.classList.remove('open');
   saBackdrop.classList.remove('open');
 }
@@ -1629,6 +1673,7 @@ let settingsCloseFn = null;   // nivo 1: ekran sa pločicama
 let settingsSubFn = null;     // nivo 2: otvoren pod-ekran
 const SETTINGS_BACK_SVG = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
 const NUM_ATTR = 'inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"';
+const APP_VERSION = 3;
 function daniRec(n){ return (n%10===1 && n%100!==11) ? 'dan' : 'dana'; }
 function settingsTile(icon, title, sub, onclick, extraClass){
   return '<button type="button" class="set-tile'+(extraClass?' '+extraClass:'')+'" onclick="'+onclick+'">'+
@@ -1660,7 +1705,8 @@ function renderSettingsTiles(){
     settingsTile('💾', 'Rezervna kopija', last ? 'Poslednja: '+fmtDateSrFromDate(last) : 'Još nije napravljena', "openSettingsSub('backup')")+
     settingsTile('⏰', 'Podsetnik za bekap', n === 1 ? 'Svaki dan' : 'Na svakih '+n+' '+daniRec(n), "openSettingsSub('reminder')")+
     settingsTile('📊', 'Uvoz iz Excel / CSV', 'Excel ili CSV fajl', "openSettingsSub('excel')")+
-    settingsTile('⚠️', 'Brisanje', 'Stanje i istorija prodaje', "openSettingsSub('wipe')", 'danger'));
+    settingsTile('⚠️', 'Brisanje', 'Stanje i istorija prodaje', "openSettingsSub('wipe')", 'danger')+
+    '<div class="app-version">verzija '+APP_VERSION+'</div>');
 }
 function openSettingsSub(key){
   if(!settingsCloseFn || settingsSubFn) return;
