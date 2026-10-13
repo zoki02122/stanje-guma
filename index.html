@@ -523,11 +523,11 @@ html[data-theme="koza"]{
     <div id="stanjeControls">
       <div class="search-dim">
         <div class="dim-inputs">
-          <input type="number" id="sq_w" placeholder="" inputmode="numeric">
+          <input type="number" id="sq_w" placeholder="" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
           <span class="dim-sep">/</span>
-          <input type="number" id="sq_p" placeholder="" inputmode="numeric">
+          <input type="number" id="sq_p" placeholder="" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
           <span class="dim-sep">/</span>
-          <input type="number" id="sq_r" placeholder="" inputmode="numeric">
+          <input type="number" id="sq_r" placeholder="" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
         </div>
         <button class="clear-search-btn" id="clearSearchBtn" title="Poništi pretragu" aria-label="Poništi pretragu"><span class="ic-emoji">&times;</span><svg class="ic-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>
@@ -595,11 +595,11 @@ html[data-theme="koza"]{
   <div class="field">
     <label>Dimenzije</label>
     <div class="dim-inputs">
-      <input type="number" id="f_dim_w" placeholder="185" inputmode="numeric">
+      <input type="number" id="f_dim_w" placeholder="185" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
       <span class="dim-sep">/</span>
-      <input type="number" id="f_dim_p" placeholder="60" inputmode="numeric">
+      <input type="number" id="f_dim_p" placeholder="60" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
       <span class="dim-sep">/</span>
-      <input type="number" id="f_dim_r" placeholder="14" inputmode="numeric">
+      <input type="number" id="f_dim_r" placeholder="14" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
       <input type="text" id="f_dim_extra" class="dim-extra" placeholder="C" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
     </div>
   </div>
@@ -611,7 +611,7 @@ html[data-theme="koza"]{
     </div>
     <div class="field">
       <label>Količina</label>
-      <input type="number" id="f_kolicina" min="0" placeholder="1" inputmode="numeric">
+      <input type="number" id="f_kolicina" min="0" placeholder="1" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
     </div>
   </div>
 
@@ -649,7 +649,7 @@ html[data-theme="koza"]{
   <div class="row2">
     <div class="field">
       <label>Količina za prodaju</label>
-      <input type="number" id="s_kolicina" min="1" value="1" inputmode="numeric">
+      <input type="number" id="s_kolicina" min="1" value="1" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
     </div>
     <div class="field">
       <label>Cena po komadu (din)</label>
@@ -659,7 +659,7 @@ html[data-theme="koza"]{
 
   <div class="field">
     <label>Datum prodaje</label>
-    <input type="date" id="s_datum">
+    <input type="date" id="s_datum" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
   </div>
 
   <div class="total-line">
@@ -1687,7 +1687,7 @@ let settingsCloseFn = null;   // nivo 1: ekran sa pločicama
 let settingsSubFn = null;     // nivo 2: otvoren pod-ekran
 const SETTINGS_BACK_SVG = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
 const NUM_ATTR = 'inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"';
-const APP_VERSION = 4;
+const APP_VERSION = 5;
 function daniRec(n){ return (n%10===1 && n%100!==11) ? 'dan' : 'dana'; }
 function settingsTile(icon, title, sub, onclick, extraClass){
   return '<button type="button" class="set-tile'+(extraClass?' '+extraClass:'')+'" onclick="'+onclick+'">'+
