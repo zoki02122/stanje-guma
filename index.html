@@ -83,6 +83,8 @@
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--font-ui);-webkit-tap-highlight-color:transparent;}
+  html,body{overscroll-behavior-y:contain;} /* v6: povlačenje na vrhu ne osvežava stranicu (ne briše pretragu) */
+  .card,.sale-row{-webkit-user-select:none;user-select:none;} /* v6: dodir/držanje pločice ne označava tekst */
   h1,h2,h3,.display{font-family:var(--font-title);font-weight:700;letter-spacing:0.01em;}
   #app{max-width:640px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;}
 
@@ -1687,7 +1689,7 @@ let settingsCloseFn = null;   // nivo 1: ekran sa pločicama
 let settingsSubFn = null;     // nivo 2: otvoren pod-ekran
 const SETTINGS_BACK_SVG = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
 const NUM_ATTR = 'inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"';
-const APP_VERSION = 5;
+const APP_VERSION = 6;
 function daniRec(n){ return (n%10===1 && n%100!==11) ? 'dan' : 'dana'; }
 function settingsTile(icon, title, sub, onclick, extraClass){
   return '<button type="button" class="set-tile'+(extraClass?' '+extraClass:'')+'" onclick="'+onclick+'">'+
