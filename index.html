@@ -190,6 +190,9 @@
   .field label{display:block;font-size:13px;color:var(--muted);margin-bottom:5px;font-weight:500;}
   .field input,.field select,.field textarea{width:100%;background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding:11px 12px;color:var(--text);font-size:16px;font-family:inherit;}
   .field textarea{resize:vertical;min-height:48px;}
+  /* MODUL gboard-backspace v2: osenčeno polje (stari tekst kao placeholder) */
+  input.pre-sel, textarea.pre-sel{ background:color-mix(in srgb, var(--focus-line) 22%, var(--surface-2)) !important; }
+  input.pre-sel::placeholder, textarea.pre-sel::placeholder{ color:var(--text); opacity:1; }
   .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--focus-line);}
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 
@@ -1084,9 +1087,10 @@ const dimPEl = document.getElementById('f_dim_p');
 const dimREl = document.getElementById('f_dim_r');
 const dimExtraEl = document.getElementById('f_dim_extra');
 function autoAdvance(el, next, maxLen){
-  el.addEventListener('input', () => {
+  el.addEventListener('input', (e) => {
+    if(e.isComposing) return;
     if(el.value.length >= maxLen){
-      el.value = el.value.slice(0, maxLen);
+      if(el.value.length > maxLen) el.value = el.value.slice(0, maxLen);
       if(next) next.focus();
     }
   });
@@ -1095,53 +1099,54 @@ autoAdvance(dimWEl, dimPEl, 3);
 autoAdvance(dimPEl, dimREl, 2);
 autoAdvance(dimREl, dimExtraEl, 2);
 
-// fieldOriginal: the KNOWN-GOOD value for each field, captured ONCE when the form opens.
-// This is never touched by focus events, so it cannot be corrupted by a stray/late refocus.
-// pristineArmed: which fields currently show their untouched, freshly-selected content.
+/* MODUL gboard-backspace v2 */
+/* Polje se pri ulasku isprazni, stari tekst ostaje kao osenčen placeholder (fieldOriginal); dok tastatura radi kod NE menja value. */
 const fieldOriginal = new WeakMap();
 const pristineArmed = new WeakSet();
-
-function snapshotField(el){
-  fieldOriginal.set(el, el.value);
+function snapshotField(el){ fieldOriginal.set(el, el.value); }
+function armField(el){
+  const orig = el.value;
+  fieldOriginal.set(el, orig);
+  if(el.dataset.ph == null) el.dataset.ph = el.getAttribute('placeholder') || '';
+  el.setAttribute('placeholder', orig);
+  el.value = '';
+  pristineArmed.add(el); el.classList.add('pre-sel');
 }
-
-function handleFocusSelect(el){
-  if(el.type === 'date'){ pristineArmed.delete(el); return; }
-  el.select();
-  pristineArmed.add(el);
+function disarmField(el, restore){
+  if(!pristineArmed.has(el)) return;
+  pristineArmed.delete(el); el.classList.remove('pre-sel');
+  if(el.dataset.ph != null) el.setAttribute('placeholder', el.dataset.ph);
+  if(restore && el.value === '') el.value = fieldOriginal.get(el) || '';
 }
-
-function wireBackspace(el, prev, onRestore){
+function wireBackspace(el, prev){
+  if(!el || el._bsWired) return;
+  el._bsWired = true;
+  let wasFocused = false;
   const goPrev = () => { if(prev) prev.focus(); };
-
+  el.addEventListener('pointerdown', () => { wasFocused = (document.activeElement === el); });
+  el.addEventListener('focus', () => { if(el.value !== '') armField(el); });
+  /* drugi dodir: stari tekst nazad u polje, kursor na kraj */
+  el.addEventListener('click', () => {
+    if(wasFocused && pristineArmed.has(el)){
+      disarmField(el, true);
+      try{ const n = el.value.length; el.setSelectionRange(n, n); }catch(e){}
+    }
+    wasFocused = false;
+  });
+  /* izlaz bez unosa: stari tekst se vraća (obrazac je i dalje ima) */
+  el.addEventListener('blur', () => disarmField(el, true));
   el.addEventListener('keydown', (e) => {
-    if(e.key !== 'Backspace') return;
-    if(el.value === '' || pristineArmed.has(el)){
-      e.preventDefault();
-      goPrev();
-    }
+    if(e.key === 'Backspace' && el.value === ''){ e.preventDefault(); goPrev(); }
   });
-
   el.addEventListener('beforeinput', (e) => {
-    if(e.inputType !== 'deleteContentBackward') return;
-    if(el.value === '' || pristineArmed.has(el)){
-      e.preventDefault();
-      goPrev();
-    }
+    if(e.inputType === 'deleteContentBackward' && el.value === ''){ e.preventDefault(); goPrev(); }
   });
-
-  el.addEventListener('input', (e) => {
-    if(!pristineArmed.has(el)) return;
-    if(e.inputType === 'deleteContentBackward'){
-      const original = fieldOriginal.get(el) ?? '';
-      el.value = original;
-      if(onRestore) onRestore();
-      goPrev();
-      return;
-    }
-    pristineArmed.delete(el);
-  });
+  /* prvi upis (slovo ili diktat) u osenčeno polje: senka se skida, ostaje samo novo — kod tekst ne dira */
+  el.addEventListener('input', () => { if(pristineArmed.has(el) && el.value !== '') disarmField(el, false); });
 }
+/* vrednost polja za čitanje: osenčeno (netaknuto) polje = stari tekst */
+function fieldVal(el){ return (pristineArmed.has(el) && el.value === '') ? (fieldOriginal.get(el) || '') : el.value; }
+function settleFields(root){ root.querySelectorAll('input,textarea').forEach(el => disarmField(el, true)); }
 wireBackspace(dimPEl, dimWEl);
 wireBackspace(dimREl, dimPEl);
 wireBackspace(dimExtraEl, dimREl);
@@ -1156,8 +1161,10 @@ fSaraEl.addEventListener('blur', () => {
 const fKolicinaEl = document.getElementById('f_kolicina');
 const fGodisteEl = document.getElementById('f_godiste');
 const fCenaEl = document.getElementById('f_cena');
-fCenaEl.addEventListener('input', () => {
-  fCenaEl.value = formatThousands(fCenaEl.value);
+fCenaEl.addEventListener('input', (e) => {
+  if(e.isComposing) return;
+  const f = formatThousands(fCenaEl.value);
+  if(f !== fCenaEl.value) fCenaEl.value = f;
 });
 const fNapomenaEl = document.getElementById('f_napomena');
 wireBackspace(dimWEl, fProizvodjacEl);
@@ -1218,6 +1225,7 @@ document.getElementById('cancelBtn').addEventListener('click', () => closeOverla
 backdrop.addEventListener('click', () => closeOverlay(closeSheet));
 
 document.getElementById('saveBtn').addEventListener('click', () => {
+  settleFields(document.getElementById('sheet'));
   const dimW = document.getElementById('f_dim_w').value.trim();
   const dimP = document.getElementById('f_dim_p').value.trim();
   const dimR = document.getElementById('f_dim_r').value.trim();
@@ -1274,8 +1282,8 @@ const saleSheet = document.getElementById('saleSheet');
 const saleBackdrop = document.getElementById('saleBackdrop');
 const sCenaInput = document.getElementById('s_cena');
 
-sCenaInput.addEventListener('input', () => {
-  sCenaInput.value = formatThousands(sCenaInput.value);
+sCenaInput.addEventListener('input', (e) => {
+  if(!e.isComposing){ const f = formatThousands(sCenaInput.value); if(f !== sCenaInput.value) sCenaInput.value = f; }
   updateSaleTotal();
 });
 sCenaInput.setAttribute('enterkeyhint', 'done');
@@ -1303,7 +1311,7 @@ function parseFirstNumber(str){
   return m ? m[0] : '';
 }
 function cenaValue(){
-  return parseInt(String(sCenaInput.value||'').replace(/\./g,'')) || 0;
+  return parseInt(String(fieldVal(sCenaInput)||'').replace(/\./g,'')) || 0;
 }
 
 function openSale(id){
@@ -1323,20 +1331,21 @@ function openSale(id){
 }
 
 function updateSaleTotal(){
-  const k = parseInt(document.getElementById('s_kolicina').value) || 0;
+  const k = parseInt(fieldVal(document.getElementById('s_kolicina'))) || 0;
   const c = cenaValue();
   document.getElementById('s_ukupno').textContent = fmt(k*c) + ' din';
 }
 document.getElementById('s_kolicina').addEventListener('input', updateSaleTotal);
-wireBackspace(document.getElementById('s_kolicina'), null, updateSaleTotal);
-wireBackspace(sCenaInput, document.getElementById('s_kolicina'), updateSaleTotal);
+wireBackspace(document.getElementById('s_kolicina'), null);
+wireBackspace(sCenaInput, document.getElementById('s_kolicina'));
 document.getElementById('saleCancelBtn').addEventListener('click', () => closeOverlay(closeSaleModal));
 saleBackdrop.addEventListener('click', () => closeOverlay(closeSaleModal));
 
 document.getElementById('saleConfirmBtn').addEventListener('click', () => {
+  settleFields(saleSheet);
   const item = items.find(i => i.id === sellingId);
   if(!item) return;
-  const k = parseInt(document.getElementById('s_kolicina').value) || 0;
+  const k = parseInt(fieldVal(document.getElementById('s_kolicina'))) || 0;
   const c = cenaValue();
   const datum = document.getElementById('s_datum').value || todayISO();
   if(k < 1 || k > item.kolicina){ showToast(`Unesi količinu od 1 do ${item.kolicina}`); return; }
@@ -1569,6 +1578,7 @@ confirmBackdrop.addEventListener('click', () => {
 
 // ---------- HEADER TOGGLE ----------
 function resetStanjeSearch(){
+  ['sq_w','sq_p','sq_r','searchInput'].forEach(id => disarmField(document.getElementById(id), false));
   dimQueryW = ''; dimQueryP = ''; dimQueryR = '';
   document.getElementById('sq_w').value = '';
   document.getElementById('sq_p').value = '';
@@ -1622,9 +1632,10 @@ const sqW = document.getElementById('sq_w');
 const sqP = document.getElementById('sq_p');
 const sqR = document.getElementById('sq_r');
 function wireSearchDim(el, key, next, maxLen){
-  el.addEventListener('input', () => {
+  el.addEventListener('input', (e) => {
+    if(e.isComposing) return;
     let v = el.value.slice(0, maxLen);
-    el.value = v;
+    if(v !== el.value) el.value = v;
     if(key === 'w') dimQueryW = v;
     if(key === 'p') dimQueryP = v;
     if(key === 'r') dimQueryR = v;
@@ -1634,11 +1645,11 @@ function wireSearchDim(el, key, next, maxLen){
     }
     renderStanje();
   });
-  el.addEventListener('focus', () => handleFocusSelect(el));
 }
 wireSearchDim(sqW, 'w', sqP, 3);
 wireSearchDim(sqP, 'p', sqR, 2);
 wireSearchDim(sqR, 'r', null, 2);
+wireBackspace(sqW, null);
 wireBackspace(sqP, sqW);
 wireBackspace(sqR, sqP);
 wireBackspace(document.getElementById('searchInput'), sqR);
@@ -1689,7 +1700,7 @@ let settingsCloseFn = null;   // nivo 1: ekran sa pločicama
 let settingsSubFn = null;     // nivo 2: otvoren pod-ekran
 const SETTINGS_BACK_SVG = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
 const NUM_ATTR = 'inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"';
-const APP_VERSION = 6;
+const APP_VERSION = 7;
 function daniRec(n){ return (n%10===1 && n%100!==11) ? 'dan' : 'dana'; }
 function settingsTile(icon, title, sub, onclick, extraClass){
   return '<button type="button" class="set-tile'+(extraClass?' '+extraClass:'')+'" onclick="'+onclick+'">'+
@@ -1979,10 +1990,6 @@ function wipeSales(){
 
 
 
-// ---------- SELECT-ALL ON FOCUS (edit/sale forms) ----------
-document.querySelectorAll('#sheet input, #sheet textarea, #saleSheet input').forEach(el => {
-  el.addEventListener('focus', () => handleFocusSelect(el));
-});
 
 // ---------- CLOSE X BUTTONS ----------
 document.getElementById('closeXmain').addEventListener('click', () => closeOverlay(closeSheet));
