@@ -63,6 +63,7 @@
     --blue-dim:#1c2b3a;
     --green:#6fbf73;
     --green-dim:#1e2f1f;
+    --ai-line:#2f8f55;                  /* v8: AI dugme i zeleno označena polja (iste u svim temama) */
     --red:#e2685f;
     --danger-dim:#3a1f1e;
     /* tokeni po nameni (Klasična = današnje vrednosti) */
@@ -247,6 +248,55 @@
   .sheet{padding-top:44px;}
   .sheet-close{position:absolute;top:12px;right:12px;width:32px;height:32px;border-radius:50%;background:var(--surface-2);border:1px solid var(--line);color:var(--muted);font-size:19px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;}
   .sheet-close:active{color:var(--text);}
+  /* v8: slike gume i AI čitanje (po uzoru na hotel Zakazivanja v66) */
+  .sheet-head{display:flex;align-items:center;gap:10px;margin:0 44px 12px 0;}
+  .sheet-head h2{margin:0;flex:1;min-width:0;}
+  .ai-btn{flex:none;display:flex;align-items:center;gap:5px;height:40px;padding:0 12px;border-radius:12px;font:inherit;font-size:15px;font-weight:800;border:1.5px solid var(--line);background:var(--surface-2);color:var(--muted);cursor:pointer;}
+  .ai-btn.on{border-color:var(--ai-line);background:var(--ai-line);color:#fff;}
+  .ai-btn.busy{animation:aiPuls 1s ease-in-out infinite;}
+  @keyframes aiPuls{50%{opacity:.55;}}
+  .pic-big{position:relative;width:100%;aspect-ratio:2/1;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:var(--surface-2);margin-bottom:8px;}
+  .pic-big img{width:100%;height:100%;object-fit:cover;display:block;}
+  .pic-cnt{position:absolute;right:10px;bottom:10px;background:rgba(0,0,0,.65);color:#fff;border-radius:999px;padding:5px 11px;font-size:13px;font-weight:600;}
+  .pic-btns{display:flex;gap:8px;margin-bottom:14px;}
+  .pic-btns .btn{flex:1;}
+  .sw-strip{position:absolute;inset:0;overflow:hidden;}
+  .sw-track{display:flex;height:100%;will-change:transform;}
+  .sw-track.anim{transition:transform .26s cubic-bezier(.2,.8,.2,1);}
+  .sw-slide{flex:0 0 100%;height:100%;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .pic-big .sw-strip{touch-action:pan-y;}
+  .pic-big .sw-slide img{pointer-events:none;user-select:none;-webkit-user-drag:none;}
+  .vw-img .sw-slide img{transform-origin:50% 50%;will-change:transform;}
+  .vw-img .sw-slide img.zm-anim{transition:transform .22s ease;}
+  .cam-screen{position:fixed;inset:0;z-index:70;background:#000;display:flex;flex-direction:column;color:#fff;}
+  .cam-top,.vw-top{flex:none;display:flex;align-items:center;justify-content:space-between;padding:calc(12px + env(safe-area-inset-top,0px)) 14px 10px;}
+  .cam-top b,.vw-top b{font-size:16px;}
+  .cam-btn{width:42px;height:42px;border-radius:50%;border:1px solid #444;background:#000;color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .cam-view{flex:1;min-height:0;position:relative;background:#111;}
+  .cam-view video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+  .cam-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .25s;}
+  .cam-flash.on{opacity:.7;transition:none;}
+  .cam-bot{flex:none;display:flex;align-items:center;justify-content:space-between;padding:16px 18px calc(22px + env(safe-area-inset-bottom));gap:10px;}
+  .cam-thumbs{flex:1 1 0;display:flex;gap:5px;min-width:0;}
+  .cam-thumbs img{width:42px;height:42px;object-fit:cover;border-radius:8px;border:2px solid #fff;}
+  .cam-shot{flex:none;width:76px;height:76px;border-radius:50%;border:5px solid #fff;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;}
+  .cam-shot span{width:58px;height:58px;border-radius:50%;background:#fff;display:block;}
+  .cam-shot:disabled span{background:#888;}
+  .cam-done{flex:1 1 0;display:flex;justify-content:flex-end;}
+  .cam-done button{height:46px;padding:0 18px;border-radius:999px;border:none;background:var(--ai-line);color:#fff;font-weight:700;font-size:15px;font-family:inherit;cursor:pointer;}
+  .vw-screen{position:fixed;inset:0;z-index:48;background:#000;display:flex;flex-direction:column;color:#fff;touch-action:none;}
+  .vw-del{color:#f66;border-color:#533;}
+  .vw-img{flex:1;min-height:0;position:relative;overflow:hidden;touch-action:none;}
+  .vw-img img{max-width:100%;max-height:100%;display:block;user-select:none;-webkit-user-drag:none;pointer-events:none;}
+  .vw-bot{flex:none;padding:14px 16px calc(22px + env(safe-area-inset-bottom));text-align:center;}
+  .vw-hint{color:#aaa;font-size:12.5px;}
+  body.vw-open #confirmBackdrop{z-index:49;} body.vw-open #confirmSheet{z-index:50;}
+  .dim-one{display:flex;gap:10px;}
+  .dim-one input{flex:1;min-width:0;letter-spacing:.3px;}
+  .dim-c{flex:0 0 60px;border-radius:9px;border:1px solid var(--line);background:var(--surface-2);color:var(--muted);font:inherit;font-size:17px;font-weight:700;cursor:pointer;}
+  .dim-c.on{background:var(--act-bg);border-color:var(--act-line);color:var(--on-act);box-shadow:var(--act-shine);}
+  .field.ai-fill input,.field.ai-fill .seg,.field.ai-fill .dim-one input{border-color:var(--ai-line) !important;box-shadow:0 0 0 2px color-mix(in srgb, var(--ai-line) 35%, transparent) !important;}
+  .field.ai-fill .seg{border:1px solid;border-radius:11px;}
 
   /* ================= IKONICE: Klasična = emoji, nove teme = linijske ikonice ================= */
   .ic-svg{display:none;}
@@ -580,8 +630,12 @@ html[data-theme="koza"]{
 
 <div class="sheet" id="sheet">
   <button class="sheet-close" id="closeXmain" aria-label="Zatvori"><span class="ic-emoji">&times;</span><svg class="ic-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-  <h2 id="sheetTitle">Nova guma</h2>
-  <div class="sub">Popuni podatke o gumi</div>
+  <div class="sheet-head"><h2 id="sheetTitle">Nova guma</h2><span id="aiBtnWrap"></span></div>
+  <div id="picBox"></div>
+  <div class="pic-btns">
+    <button type="button" class="btn ghost" id="picCamBtn">📷 Slikaj</button>
+    <button type="button" class="btn ghost" id="picGalBtn">🖼 Galerija</button>
+  </div>
 
   <div class="field">
     <label>Tip</label>
@@ -599,13 +653,9 @@ html[data-theme="koza"]{
 
   <div class="field">
     <label>Dimenzije</label>
-    <div class="dim-inputs">
-      <input type="number" id="f_dim_w" placeholder="185" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-      <span class="dim-sep">/</span>
-      <input type="number" id="f_dim_p" placeholder="60" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-      <span class="dim-sep">/</span>
-      <input type="number" id="f_dim_r" placeholder="14" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-      <input type="text" id="f_dim_extra" class="dim-extra" placeholder="C" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+    <div class="dim-one">
+      <input type="text" id="f_dim" placeholder="205/55 R16" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      <button type="button" class="dim-c" id="f_dim_c" aria-pressed="false">C</button>
     </div>
   </div>
 
@@ -788,7 +838,7 @@ function loadAll(){
     document.getElementById('warnBanner').style.display = 'block';
   }
 }
-function persistItems(){ if(!safeSet(LS_ITEMS, items)) showToast('Upozorenje: nije sačuvano trajno'); }
+function persistItems(){ if(!safeSet(LS_ITEMS, items)) showToast('Upozorenje: nije sačuvano trajno'); if(window.slikePocisti) window.slikePocisti(); }
 function persistSales(){ if(!safeSet(LS_SALES, sales)) showToast('Upozorenje: nije sačuvano trajno'); }
 
 // ---------- BACKUP REMINDER ----------
@@ -1082,10 +1132,43 @@ function setTip(v){
 tipSeg.querySelectorAll('button').forEach(b => b.addEventListener('click', () => setTip(b.dataset.v)));
 
 // ---------- DIMENZIJE: auto-advance between fields ----------
-const dimWEl = document.getElementById('f_dim_w');
-const dimPEl = document.getElementById('f_dim_p');
-const dimREl = document.getElementById('f_dim_r');
-const dimExtraEl = document.getElementById('f_dim_extra');
+/* v8 (Zoran 21.11.): dimenzija u JEDNOM polju kao u hotelu Zakazivanja — kucaju se samo cifre, kose crte i R se dodaju same:
+   205 → 205, 2055 → 205/5, 20555 → 205/55, 2055516 → 205/55 R16. C je dugme pored polja. U podacima zapis ostaje „w/p/r[ C]“. */
+const dimEl = document.getElementById('f_dim');
+const dimCBtn = document.getElementById('f_dim_c');
+let dimOrigStr = '', dimRest = '';
+function dimFmt(v){
+  const d = String(v||'').replace(/\D/g,'').slice(0,7);
+  return d.slice(0,3) + (d.length>3 ? '/'+d.slice(3,5) : '') + (d.length>5 ? ' R'+d.slice(5,7) : '');
+}
+function dimShow(str){
+  const p = parseDimenzije(str);
+  if(!p) return { text: String(str||''), c: false, rest: '' };
+  const ex = String(p.extra||'').trim(), mc = /^C\b\s*(.*)$/i.exec(ex);
+  return { text: p.w + '/' + p.p + ' R' + p.r, c: !!mc, rest: mc ? mc[1].trim() : ex };
+}
+function setDimC(on){ dimCBtn.classList.toggle('on', !!on); dimCBtn.setAttribute('aria-pressed', on ? 'true' : 'false'); }
+function setDimField(str){ const d = dimShow(str); dimEl.value = d.text; setDimC(d.c); dimRest = d.rest; dimOrigStr = String(str||''); }
+dimCBtn.addEventListener('click', () => setDimC(!dimCBtn.classList.contains('on')));
+dimEl.addEventListener('input', (e) => {
+  if(e.isComposing) return;
+  const digits = dimEl.value.replace(/\D/g,'');
+  if(!/^[\d\/ Rr]*$/.test(dimEl.value) && !digits) return;   /* stari zapis koji nije dimenzija: ne dira se */
+  const f = dimFmt(dimEl.value); if(f !== dimEl.value) dimEl.value = f;
+  if(digits.length >= 7 && document.activeElement === dimEl) fSaraEl.focus();
+});
+/* dimenzija za čuvanje: '' kad nije potpuna; nepromenjena guma zadržava tačan stari zapis */
+function dimForSave(){
+  const v = dimEl.value.trim();
+  if(dimOrigStr && v === dimShow(dimOrigStr).text && !/^\d{3}\/\d{2} R\d{2}$/.test(v)) return dimOrigStr;   /* stari zapis koji nije oblika 205/55 R16, nedirnut */
+  const m = /^(\d{3})\/(\d{2}) R(\d{2})$/.exec(v);
+  if(!m) return '';
+  const p = { w:m[1], p:m[2], r:m[3] };
+  const extra = [dimCBtn.classList.contains('on') ? 'C' : '', dimRest].filter(Boolean).join(' ');
+  const str = combineDimenzije(p.w, p.p, p.r, extra);
+  if(dimOrigStr){ const o = dimShow(dimOrigStr); if(o.text === p.w+'/'+p.p+' R'+p.r && o.c === dimCBtn.classList.contains('on')) return dimOrigStr; }
+  return str;
+}
 function autoAdvance(el, next, maxLen){
   el.addEventListener('input', (e) => {
     if(e.isComposing) return;
@@ -1095,9 +1178,6 @@ function autoAdvance(el, next, maxLen){
     }
   });
 }
-autoAdvance(dimWEl, dimPEl, 3);
-autoAdvance(dimPEl, dimREl, 2);
-autoAdvance(dimREl, dimExtraEl, 2);
 
 /* MODUL gboard-backspace v2 */
 /* Polje se pri ulasku isprazni, stari tekst ostaje kao osenčen placeholder (fieldOriginal); dok tastatura radi kod NE menja value. */
@@ -1147,9 +1227,6 @@ function wireBackspace(el, prev){
 /* vrednost polja za čitanje: osenčeno (netaknuto) polje = stari tekst */
 function fieldVal(el){ return (pristineArmed.has(el) && el.value === '') ? (fieldOriginal.get(el) || '') : el.value; }
 function settleFields(root){ root.querySelectorAll('input,textarea').forEach(el => disarmField(el, true)); }
-wireBackspace(dimPEl, dimWEl);
-wireBackspace(dimREl, dimPEl);
-wireBackspace(dimExtraEl, dimREl);
 
 // extend backward navigation across the whole add/edit form
 const fProizvodjacEl = document.getElementById('f_proizvodjac');
@@ -1167,9 +1244,9 @@ fCenaEl.addEventListener('input', (e) => {
   if(f !== fCenaEl.value) fCenaEl.value = f;
 });
 const fNapomenaEl = document.getElementById('f_napomena');
-wireBackspace(dimWEl, fProizvodjacEl);
+wireBackspace(dimEl, fProizvodjacEl);
 wireBackspace(fProizvodjacEl, null);
-wireBackspace(fSaraEl, dimExtraEl);
+wireBackspace(fSaraEl, dimEl);
 wireBackspace(fKolicinaEl, fSaraEl);
 wireBackspace(fGodisteEl, fKolicinaEl);
 wireBackspace(fCenaEl, fGodisteEl);
@@ -1184,17 +1261,15 @@ function openAdd(){
   ['proizvodjac','sara','kolicina','godiste','cena','napomena'].forEach(f => {
     document.getElementById('f_'+f).value = '';
   });
-  document.getElementById('f_dim_w').value = '';
-  document.getElementById('f_dim_p').value = '';
-  document.getElementById('f_dim_r').value = '';
-  document.getElementById('f_dim_extra').value = '';
+  setDimField('');
   setTip('M+S');
+  formOpenPics(null);
   snapshotAllFields();
   openSheet();
 }
 
 function snapshotAllFields(){
-  [fProizvodjacEl, dimWEl, dimPEl, dimREl, dimExtraEl, fSaraEl, fKolicinaEl, fGodisteEl, fCenaEl, fNapomenaEl]
+  [fProizvodjacEl, dimEl, fSaraEl, fKolicinaEl, fGodisteEl, fCenaEl, fNapomenaEl]
     .forEach(el => snapshotField(el));
 }
 
@@ -1205,17 +1280,14 @@ function openEdit(id){
   document.getElementById('sheetTitle').textContent = `${item.proizvodjac || 'Guma'} ${item.dimenzije || ''}`;
   document.getElementById('deleteRow').style.display = 'flex';
   document.getElementById('f_proizvodjac').value = item.proizvodjac || '';
-  const parsedDim = parseDimenzije(item.dimenzije);
-  document.getElementById('f_dim_w').value = parsedDim ? parsedDim.w : '';
-  document.getElementById('f_dim_p').value = parsedDim ? parsedDim.p : '';
-  document.getElementById('f_dim_r').value = parsedDim ? parsedDim.r : '';
-  document.getElementById('f_dim_extra').value = parsedDim ? parsedDim.extra : (item.dimenzije || '');
+  setDimField(item.dimenzije || '');
   document.getElementById('f_sara').value = item.sara || '';
   document.getElementById('f_kolicina').value = item.kolicina || '';
   document.getElementById('f_godiste').value = item.godiste || '';
   document.getElementById('f_cena').value = item.cena || '';
   document.getElementById('f_napomena').value = item.napomena || '';
   setTip(item.tip || 'M+S');
+  formOpenPics(id);
   snapshotAllFields();
   openSheet();
 }
@@ -1226,12 +1298,8 @@ backdrop.addEventListener('click', () => closeOverlay(closeSheet));
 
 document.getElementById('saveBtn').addEventListener('click', () => {
   settleFields(document.getElementById('sheet'));
-  const dimW = document.getElementById('f_dim_w').value.trim();
-  const dimP = document.getElementById('f_dim_p').value.trim();
-  const dimR = document.getElementById('f_dim_r').value.trim();
-  const dimExtra = document.getElementById('f_dim_extra').value.trim();
-  const dimenzije = combineDimenzije(dimW, dimP, dimR, dimExtra);
-  if(!dimenzije){ showToast('Unesi širinu, profil i prečnik'); return; }
+  const dimenzije = dimForSave();
+  if(!dimenzije){ showToast('Unesi dimenziju: širinu, profil i prečnik (npr. 2055516)'); return; }
   const data = {
     tip: tipSeg.dataset.value || 'M+S',
     proizvodjac: document.getElementById('f_proizvodjac').value.trim(),
@@ -1252,6 +1320,7 @@ document.getElementById('saveBtn').addEventListener('click', () => {
     items.unshift({id: savedId, ...data});
   }
   persistItems();
+  Slike.postavi(savedId, formPics);
   // sačuvana guma mora da se vidi: ako je trenutni filter/pretraga skriva, filter se skloni
   if(!matchesFilter(items.find(i => i.id === savedId))) resetStanjeSearch(); else renderStanje();
   closeOverlay(closeSheet);
@@ -1270,12 +1339,530 @@ document.getElementById('deleteBtn').addEventListener('click', () => {
     onConfirm: () => {
       items = items.filter(i => i.id !== editingId);
       persistItems();
+      Slike.postavi(editingId, null);
       renderStanje();
       closeOverlay(closeSheet);
       showToast('Obrisano');
     }
   });
 });
+
+// ---------- v8 SLIKE GUME + AI ČITANJE (po uzoru na hotel Zakazivanja v66) ----------
+/* Slike: IndexedDB „stanjeGuma“ / „slike“ {id = id gume, slike:[dataURL]}; u memoriji SLIKE (Map). Slike u prozoru gume su nacrt
+   (formPics) i upisuju se tek na Sačuvaj; Otkaži ih odbacuje. Slike gume koje više nema brišu se same (Slike.pocisti). */
+const SLIKE = new Map();
+const Slike = (function(){
+  let dbP = null;
+  function db(){
+    if(dbP) return dbP;
+    dbP = new Promise((res, rej)=>{
+      let r; try{ r = indexedDB.open('stanjeGuma', 1); }catch(e){ rej(e); return; }
+      r.onupgradeneeded = ()=>{ const d = r.result; if(!d.objectStoreNames.contains('slike')) d.createObjectStore('slike', { keyPath:'id' }); };
+      r.onsuccess = ()=>res(r.result); r.onerror = ()=>rej(r.error);
+    });
+    return dbP;
+  }
+  function run(mode, fn){
+    return db().then(d=>new Promise((res, rej)=>{ const tx = d.transaction('slike', mode); const st = tx.objectStore('slike'); const out = fn(st);
+      tx.oncomplete = ()=>res(out && out.result); tx.onerror = ()=>rej(tx.error); tx.onabort = ()=>rej(tx.error); }));
+  }
+  const fail = (e)=>{ showToast('Upozorenje: slike nisu sačuvane trajno ('+((e && e.message) || e)+')'); return false; };
+  return {
+    ucitaj(){ return run('readonly', st=>st.getAll()).then(all=>{ SLIKE.clear(); (all||[]).forEach(r=>{ if(r && r.id && Array.isArray(r.slike) && r.slike.length) SLIKE.set(r.id, r.slike); }); }).catch(()=>{}); },
+    postavi(id, arr){
+      if(!id) return Promise.resolve(true);
+      const a = (arr||[]).slice();
+      const isto = (SLIKE.get(id)||[]).join('|') === a.join('|'); if(isto) return Promise.resolve(true);
+      if(a.length) SLIKE.set(id, a); else SLIKE.delete(id);
+      return run('readwrite', st=> a.length ? st.put({ id, slike:a }) : st.delete(id)).then(()=>true, fail);
+    },
+    zameniSve(list){
+      SLIKE.clear(); (list||[]).forEach(r=>{ if(r && r.id && Array.isArray(r.slike) && r.slike.length) SLIKE.set(r.id, r.slike.slice()); });
+      return run('readwrite', st=>{ st.clear(); SLIKE.forEach((v,k)=>st.put({ id:k, slike:v })); }).then(()=>true, fail);
+    },
+    pocisti(){ const ids = new Set(items.map(i=>i.id)); [...SLIKE.keys()].forEach(k=>{ if(!ids.has(k)) this.postavi(k, null); }); }
+  };
+})();
+Slike.ucitaj().then(()=>{ Slike.pocisti(); window.slikePocisti = ()=>Slike.pocisti(); });
+
+let formPics = [], picIdx = 0, tipTouched = false, aiMarks = new Set(), aiRun = 0, aiFormToken = 0;
+function formOpenPics(id){
+  formPics = id ? (SLIKE.get(id)||[]).slice() : []; picIdx = 0; tipTouched = false; aiFormToken++;
+  aiMarks.clear(); document.querySelectorAll('#sheet .field.ai-fill').forEach(f=>f.classList.remove('ai-fill'));
+  renderPics(); renderAiBtn();
+}
+function renderPics(){
+  const box = document.getElementById('picBox'); if(!box) return;
+  if(!formPics.length){ box.innerHTML = ''; return; }
+  if(picIdx >= formPics.length) picIdx = 0;
+  box.innerHTML = '<div class="pic-big" id="picBig">'+stripHtml(formPics, 'cover')+'<span class="pic-cnt" id="picCnt">'+(picIdx+1)+' / '+formPics.length+'</span></div>';
+  makeStrip(box.querySelector('.sw-strip'), { idx:picIdx, onIdx:(i)=>{ picIdx = i; const c = document.getElementById('picCnt'); if(c) c.textContent = (i+1)+' / '+formPics.length; }, onTap:()=>openViewer(picIdx) });
+}
+function addPics(arr){
+  if(!arr || !arr.length) return;
+  const before = formPics.length; formPics = formPics.concat(arr); picIdx = before;
+  renderPics(); aiCitaj(arr);
+}
+/* fotografije: cele slike, umanjene na 1600 px po dužoj strani, JPEG 0,85 */
+const PIC_MAX = 1600, PIC_Q = 0.85;
+function loadImg(src){ return new Promise((res, rej)=>{ const im = new Image(); im.onload = ()=>res(im); im.onerror = ()=>rej(new Error('Slika ne može da se učita.')); im.src = src; }); }
+async function shrinkPic(src, max, q){
+  const im = await loadImg(src);
+  const k = Math.min(1, (max||PIC_MAX) / Math.max(im.naturalWidth, im.naturalHeight));
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(im.naturalWidth * k)); c.height = Math.max(1, Math.round(im.naturalHeight * k));
+  c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', q || PIC_Q);
+}
+function blobToPic(blob){ const u = URL.createObjectURL(blob); return shrinkPic(u).finally(()=>URL.revokeObjectURL(u)); }
+function pickFiles(camera){
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*';
+  if(camera) inp.capture = 'environment'; else inp.multiple = true;
+  inp.onchange = async ()=>{
+    const fs = Array.from(inp.files || []); if(!fs.length) return;
+    const out = [];
+    for(const f of fs){ try{ out.push(await blobToPic(f)); }catch(e){} }
+    if(out.length < fs.length) showToast('Nisu sve slike mogle da se učitaju ('+(fs.length-out.length)+').');
+    addPics(out);
+  };
+  inp.click();
+}
+/* Slikaj: kamera unutar aplikacije (getUserMedia + ImageCapture.takePhoto), više slika zaredom, pa Gotovo.
+   Nema kamere / nema dozvole → kamera telefona (jedna slika). */
+let camCloseFn = null, camStream = null, camShots = [], camBusy = false;
+async function openCamera(){
+  if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){ pickFiles(true); return; }
+  blurInside(sheet);
+  camShots = []; camBusy = false;
+  const el = document.createElement('div'); el.className = 'cam-screen'; el.id = 'camScreen';
+  el.innerHTML = '<div class="cam-top"><button class="cam-btn" onclick="closeCamera()" aria-label="Nazad">‹</button><b id="camCount">Slikano: 0</b><span style="width:42px"></span></div>'+
+    '<div class="cam-view"><video id="camVideo" playsinline muted autoplay></video><div class="cam-flash" id="camFlash"></div></div>'+
+    '<div class="cam-bot"><div class="cam-thumbs" id="camThumbs"></div>'+
+    '<button class="cam-shot" id="camShot" onclick="camTake()" aria-label="Slikaj"><span></span></button>'+
+    '<div class="cam-done"><button onclick="closeCamera()">Gotovo</button></div></div>';
+  document.body.appendChild(el);
+  /* izlaz (Gotovo, ‹ ili korak nazad): snimljene slike UVEK idu u gumu — višak se briše u pregledu */
+  camCloseFn = ()=>{
+    if(camStream){ camStream.getTracks().forEach(t=>t.stop()); camStream = null; }
+    const x = document.getElementById('camScreen'); if(x) x.remove();
+    const shots = camShots; camShots = []; camCloseFn = null;
+    if(shots.length) addPics(shots);
+  };
+  pushOverlay(camCloseFn);
+  try{
+    camStream = await navigator.mediaDevices.getUserMedia({ audio:false, video:{ facingMode:{ ideal:'environment' }, width:{ ideal:4096 }, height:{ ideal:3072 } } });
+    if(!camCloseFn){ camStream.getTracks().forEach(t=>t.stop()); camStream = null; return; }
+    const v = document.getElementById('camVideo'); v.srcObject = camStream; await v.play().catch(()=>{});
+  }catch(e){
+    closeCamera();
+    showToast(e && e.name==='NotAllowedError' ? 'Nije dozvoljena kamera u aplikaciji — otvaram kameru telefona (dozvola: katanac pored adrese → Kamera).' : 'Nije uspela kamera u aplikaciji — otvaram kameru telefona.', 6000);
+    pickFiles(true);
+  }
+}
+function closeCamera(){ if(camCloseFn) closeOverlay(camCloseFn); }
+async function camTake(){
+  if(camBusy || !camStream) return;
+  camBusy = true;
+  const btn = document.getElementById('camShot'); if(btn) btn.disabled = true;
+  const fl = document.getElementById('camFlash'); if(fl){ fl.classList.add('on'); setTimeout(()=>fl.classList.remove('on'), 60); }
+  try{
+    let pic = null;
+    const track = camStream.getVideoTracks()[0];
+    if('ImageCapture' in window){ try{ pic = await blobToPic(await new ImageCapture(track).takePhoto()); }catch(e){} }
+    if(!pic){   /* rezerva: kadar iz videa (manja rezolucija) */
+      const v = document.getElementById('camVideo'); const c = document.createElement('canvas');
+      c.width = v.videoWidth; c.height = v.videoHeight; c.getContext('2d').drawImage(v, 0, 0);
+      pic = await shrinkPic(c.toDataURL('image/jpeg', 0.92));
+    }
+    if(camCloseFn){
+      camShots.push(pic);
+      const cnt = document.getElementById('camCount'); if(cnt) cnt.textContent = 'Slikano: '+camShots.length;
+      const th = document.getElementById('camThumbs'); if(th) th.innerHTML = camShots.slice(-3).map(p=>'<img src="'+p+'">').join('');
+    }
+  }catch(e){ showToast('Greška: slikanje nije uspelo.'); }
+  camBusy = false;
+  const b2 = document.getElementById('camShot'); if(b2) b2.disabled = false;
+}
+document.getElementById('picCamBtn').addEventListener('click', openCamera);
+document.getElementById('picGalBtn').addEventListener('click', ()=>{ blurInside(sheet); pickFiles(false); });
+/* pregled slika preko celog ekrana: prevlačenje = sledeća/prethodna, dva prsta = uvećanje, dodir na sliku = nazad, 🗑 = obriši */
+let vwCloseFn = null, vwIdx = 0;
+function openViewer(i){
+  if(!formPics.length) return;
+  blurInside(sheet);
+  vwIdx = Math.max(0, Math.min(i||0, formPics.length-1));
+  const el = document.createElement('div'); el.className = 'vw-screen'; el.id = 'vwScreen';
+  document.body.appendChild(el); document.body.classList.add('vw-open');
+  renderViewer();
+  vwCloseFn = ()=>{ const x = document.getElementById('vwScreen'); if(x) x.remove(); document.body.classList.remove('vw-open'); vwCloseFn = null; };
+  pushOverlay(vwCloseFn);
+}
+function renderViewer(){
+  const el = document.getElementById('vwScreen'); if(!el || !formPics.length) return;
+  el.innerHTML = '<div class="vw-top"><button class="cam-btn" onclick="closeViewer()" aria-label="Nazad">‹</button><b id="vwCnt"></b><button class="cam-btn vw-del" onclick="viewerDelete()" aria-label="Obriši sliku">🗑</button></div>'+
+    '<div class="vw-img">'+stripHtml(formPics, 'contain')+'</div>'+
+    '<div class="vw-bot"><div class="vw-hint">'+(formPics.length>1 ? '‹ prevuci › · ' : '')+'dva prsta: uvećaj · dodir na sliku = nazad</div></div>';
+  makeStrip(el.querySelector('.sw-strip'), { idx:vwIdx, zoom:true, onIdx:(i)=>{ vwIdx = i; viewerBar(); }, onTap:closeViewer });
+  viewerBar();
+}
+function viewerBar(){ const c = document.getElementById('vwCnt'); if(c) c.textContent = (vwIdx+1)+' / '+formPics.length; }
+function closeViewer(){ if(vwCloseFn) closeOverlay(vwCloseFn); }
+function viewerDelete(){
+  showConfirm({ title:'Obriši sliku', message:'Obrisati ovu sliku gume? (Konačno tek kad pritisneš Sačuvaj.)', confirmLabel:'Obriši', danger:true, onConfirm:()=>{
+    if(!formPics.length) return;
+    formPics.splice(vwIdx, 1); picIdx = Math.min(picIdx, Math.max(0, formPics.length-1)); renderPics();
+    if(!formPics.length){ closeViewer(); return; }
+    vwIdx = Math.min(vwIdx, formPics.length-1); renderViewer();
+  }});
+}
+function stripHtml(arr, fit){
+  return '<div class="sw-strip"><div class="sw-track">'+arr.map(u=>'<div class="sw-slide"><img src="'+u+'" draggable="false"'+
+    (fit==='contain'?' style="max-width:100%;max-height:100%;display:block;user-select:none;-webkit-user-drag:none"':'')+'></div>').join('')+'</div></div>';
+}
+function makeStrip(box, o){
+  if(!box) return null;
+  const track = box.querySelector('.sw-track'), slides = [...track.children], n = slides.length;
+  let idx = Math.max(0, Math.min(o.idx||0, n-1));
+  const W = ()=> box.clientWidth || 1;
+  const z = { s:1, r:0, tx:0, ty:0 };
+  const img = ()=> slides[idx] && slides[idx].querySelector('img');
+  const place = (dx, anim)=>{ track.classList.toggle('anim', !!anim); track.style.transform = 'translate3d('+(-idx*W() + (dx||0))+'px,0,0)'; };
+  const zApply = (anim)=>{ const im = img(); if(!im) return; im.classList.toggle('zm-anim', !!anim);
+    im.style.transform = (z.s===1 && !z.r && !z.tx && !z.ty) ? '' : 'translate('+z.tx+'px,'+z.ty+'px) rotate('+z.r+'rad) scale('+z.s+')'; };
+  const zClamp = ()=>{ z.s = Math.max(1, Math.min(5, z.s)); if(z.s===1){ z.tx = 0; z.ty = 0; return; }
+    const mx = (z.s-1)*box.clientWidth/2 + 40, my = (z.s-1)*box.clientHeight/2 + 40;
+    z.tx = Math.max(-mx, Math.min(mx, z.tx)); z.ty = Math.max(-my, Math.min(my, z.ty)); };
+  const zReset = (anim)=>{ z.s = 1; z.r = 0; z.tx = 0; z.ty = 0; zApply(anim); };
+  const go = (i)=>{ i = Math.max(0, Math.min(n-1, i)); if(i !== idx){ zReset(false); idx = i; if(o.onIdx) o.onIdx(idx); } place(0, true); };
+  place(0, false);
+  const rel = (t)=>{ const r = box.getBoundingClientRect(); return { x:t.clientX - r.left - r.width/2, y:t.clientY - r.top - r.height/2 }; };
+  let g = null, sx = 0, sy = 0, moved = false, pinched = false, tapLast = null, tapTimer = null, lastTouch = 0;
+  box.addEventListener('touchstart', (e)=>{
+    lastTouch = Date.now();
+    if(e.touches.length === 1){
+      const t = e.touches[0]; sx = t.clientX; sy = t.clientY; moved = false; pinched = false;
+      g = (o.zoom && z.s > 1) ? { m:'pan', x:t.clientX, y:t.clientY, tx:z.tx, ty:z.ty } : { m:'swipe', lock:null, t0:Date.now() };
+    } else if(e.touches.length === 2 && o.zoom){
+      const a = rel(e.touches[0]), b = rel(e.touches[1]);
+      const m = { x:(a.x+b.x)/2, y:(a.y+b.y)/2 };
+      const c = Math.cos(-z.r), si = Math.sin(-z.r), vx = (m.x - z.tx)/z.s, vy = (m.y - z.ty)/z.s;
+      g = { m:'pinch', d:Math.hypot(a.x-b.x, a.y-b.y)||1, a:Math.atan2(b.y-a.y, b.x-a.x), s:z.s, r:z.r,
+            qx: c*vx - si*vy, qy: si*vx + c*vy };   /* tačka slike između prstiju (u koordinatama slike) */
+      pinched = true; moved = true; place(0, false);
+    }
+  }, {passive:true});
+  box.addEventListener('touchmove', (e)=>{
+    if(!g) return;
+    if(g.m === 'pinch' && e.touches.length >= 2){
+      const a = rel(e.touches[0]), b = rel(e.touches[1]);
+      const d = Math.hypot(a.x-b.x, a.y-b.y)||1, ang = Math.atan2(b.y-a.y, b.x-a.x), m = { x:(a.x+b.x)/2, y:(a.y+b.y)/2 };
+      z.s = Math.max(0.6, Math.min(5, g.s * d / g.d)); z.r = g.r + (ang - g.a);
+      const c = Math.cos(z.r), si = Math.sin(z.r);
+      z.tx = m.x - z.s*(c*g.qx - si*g.qy); z.ty = m.y - z.s*(si*g.qx + c*g.qy);
+      zApply(false);
+    } else if(g.m === 'swipe' && e.touches.length === 1){
+      const t = e.touches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+      if(!g.lock && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) g.lock = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+      if(g.lock === 'x'){ moved = true; const edge = (dx > 0 && idx === 0) || (dx < 0 && idx === n-1); place(edge ? dx*0.3 : dx, false); }
+      else if(g.lock === 'y') moved = true;
+    } else if(g.m === 'pan' && e.touches.length === 1){
+      const t = e.touches[0]; z.tx = g.tx + (t.clientX - g.x); z.ty = g.ty + (t.clientY - g.y); zClamp(); zApply(false);
+      if(Math.abs(t.clientX - g.x) > 8 || Math.abs(t.clientY - g.y) > 8) moved = true;
+    }
+  }, {passive:true});
+  box.addEventListener('touchend', (e)=>{
+    if(e.touches.length > 0){   /* podignut jedan od dva prsta: preostalim se pomera uvećana slika */
+      if(g && g.m === 'pinch' && e.touches.length === 1){ const t = e.touches[0]; g = { m:'pan', x:t.clientX, y:t.clientY, tx:z.tx, ty:z.ty }; }
+      return;
+    }
+    const gg = g; g = null; if(!gg) return;
+    const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+    if(pinched){ if(z.s < 1){ z.s = 1; } zClamp(); zApply(true); return; }   /* okret ostaje dok gledaš ovu sliku */
+    if(gg.m === 'swipe' && gg.lock === 'x'){
+      const fast = Math.abs(dx) > 25 && Date.now() - gg.t0 < 260;
+      if(Math.abs(dx) > W()*0.22 || fast) go(idx + (dx < 0 ? 1 : -1)); else place(0, true);
+      return;
+    }
+    if(moved || Math.abs(dx) > 10 || Math.abs(dy) > 10) return;
+    e.preventDefault();   /* bez lažnog „click“ posle dodira */
+    if(!o.zoom){ if(o.onTap) o.onTap(); return; }
+    const p = rel(t), now = Date.now();
+    if(tapLast && now - tapLast.t < 300 && Math.hypot(p.x-tapLast.x, p.y-tapLast.y) < 40){
+      clearTimeout(tapTimer); tapTimer = null; tapLast = null;
+      if(z.s > 1 || z.r){ zReset(true); }
+      else { z.s = 2.5; z.tx = -1.5*p.x; z.ty = -1.5*p.y; zClamp(); zApply(true); }
+      return;
+    }
+    tapLast = { t:now, x:p.x, y:p.y }; clearTimeout(tapTimer);
+    /* v51 (Zoran 19.11., isto kao Gde sam ostavio v12): uvećana/okrenuta slika — dodir je prvo vraća u ceo prikaz, tek sledeći dodir = onTap (nazad) */
+    tapTimer = setTimeout(()=>{ tapTimer = null; tapLast = null; if(z.s > 1 || z.r){ zReset(true); return; } if(o.onTap) o.onTap(); }, 280);
+  });
+  box.addEventListener('touchcancel', ()=>{ if(g && g.m === 'swipe'){ place(0, true); } g = null; });
+  /* miš (računar): klik = onTap */
+  box.addEventListener('click', ()=>{ if(Date.now() - lastTouch < 800) return; if(o.onTap) o.onTap(); });
+  window.addEventListener('resize', ()=>place(0, false));
+  return { go, get idx(){ return idx; } };
+}
+/* ---------- AI čita gumu sa slike (Zoran 21.11., kao hotel Zakazivanja v58) ----------
+   Posle Slikaj/Galerija, ako je 🤖 AI uključen i unet ključ: svaka nova slika (najviše 4) → Gemini → upis SAMO u prazna polja
+   koja se upravo ne kucaju; upisano se označi zeleno dok se ne promeni. Tip: 3PMSF → Zimska, samo M+S → M+S, jasno bez zimskih
+   oznaka → Letnja; nejasno → tip se ne menja. Tip se menja samo kod nove gume dok ga Zoran nije sam izabrao.
+   Šara, količina i cena se NE čitaju (dubina šare se sa slike ne može pouzdano izmeriti). */
+const LS_AI = 'stanjeGuma_ai', LS_APIKEY = 'stanjeGuma_apiKey';
+function getApiKey(){ try{ return localStorage.getItem(LS_APIKEY) || ''; }catch(e){ return ''; } }
+function aiOn(){ try{ return localStorage.getItem(LS_AI) !== '0'; }catch(e){ return true; } }
+function renderAiBtn(){
+  const w = document.getElementById('aiBtnWrap'); if(!w) return;
+  const on = aiOn(), busy = aiRun > 0;
+  w.innerHTML = '<button type="button" class="ai-btn'+(on?' on':'')+(busy?' busy':'')+'" id="aiBtn" onclick="aiToggle()" aria-label="AI čita slike">'+(busy?'⏳':'🤖')+'<span>'+(on?'AI':'AI isklj.')+'</span></button>';
+}
+function aiToggle(){
+  const on = !aiOn(); try{ localStorage.setItem(LS_AI, on ? '1' : '0'); }catch(e){}
+  renderAiBtn();
+  showToast(on ? (getApiKey() ? 'AI čita slike: UKLJUČENO — podaci sa gume se upisuju sami u prazna polja.' : 'AI čita slike: UKLJUČENO, ali nije unet Gemini API ključ (Podešavanja → Gemini API ključ).')
+               : 'AI čita slike: ISKLJUČENO — slike se samo čuvaju.', 5000);
+}
+const AI_GUMA_SCHEMA = { type:'object', properties:{
+  dimenzija:{type:'string'}, proizvodjac:{type:'string'}, model:{type:'string'},
+  oznaka_3pmsf:{type:'boolean'}, oznaka_ms:{type:'boolean'}, sezona:{type:'string', enum:['zimska','letnja','celogodisnja','nepoznato']}, dot:{type:'string'} },
+  required:['dimenzija','proizvodjac','sezona','dot'] };
+const AI_GUMA_SYS = 'Na slici je guma u vulkanizerskoj radnji u Srbiji. Pročitaj samo ono što se stvarno vidi; šta nije jasno — prazan string. Ne pogađaj. '+
+  'dimenzija: sa bočne strane gume u obliku "205/55 R16", a za teretne gume sa slovom C posle prečnika ("215/65 R16C"); bez indeksa nosivosti i brzine. '+
+  'proizvodjac: kako piše na gumi; model: naziv modela gume. '+
+  'oznaka_3pmsf: true samo ako se vidi simbol pahulje u planini. oznaka_ms: true ako se vidi M+S (ili M/S, M&S). '+
+  'sezona: "zimska" ako se vidi 3PMSF; "celogodisnja" ako piše All Season / 4 Seasons; "letnja" ako nema zimskih oznaka a natpisi su jasno čitljivi; "nepoznato" inače. '+
+  'dot: poslednje 4 cifre DOT oznake (nedelja i godina, npr. "2321") samo ako se jasno vide.';
+async function picParts(pics, max, q){
+  const parts = [];
+  for(const p of pics){ const s = await shrinkPic(p, max, q); const m = /^data:([^;]+);base64,(.*)$/s.exec(s); if(m) parts.push({ inlineData: { mimeType: m[1], data: m[2] } }); }
+  return parts;
+}
+function aiField(k){ return k === 'tip' ? tipSeg : k === 'dim' ? dimEl : k === 'proizvodjac' ? fProizvodjacEl : k === 'godiste' ? fGodisteEl : null; }
+function aiMark(k){ const el = aiField(k), f = el && el.closest('.field'); if(f) f.classList.add('ai-fill'); aiMarks.add(k); }
+function aiUnmark(k){ const el = aiField(k), f = el && el.closest('.field'); if(f) f.classList.remove('ai-fill'); aiMarks.delete(k); }
+[['dim', dimEl], ['proizvodjac', fProizvodjacEl], ['godiste', fGodisteEl]].forEach(([k, el])=> el.addEventListener('input', ()=>aiUnmark(k)));
+tipSeg.querySelectorAll('button').forEach(b => b.addEventListener('click', ()=>{ tipTouched = true; aiUnmark('tip'); }));
+dimCBtn.addEventListener('click', ()=>aiUnmark('dim'));
+/* upis samo u prazno polje koje se trenutno ne kuca (osenčeno polje sa starim tekstom NIJE prazno) */
+function aiPutText(k, v){
+  const el = aiField(k); if(!el || !v) return false;
+  if(String(fieldVal(el)||'').trim() || document.activeElement === el) return false;
+  el.value = v; aiMark(k); return true;
+}
+async function aiCitaj(arr){
+  if(!aiOn() || !arr || !arr.length) return;
+  if(!getApiKey()){ showToast('Nije unet Gemini API ključ — AI ne čita slike (Podešavanja → Gemini API ključ).', 6000); return; }
+  const tok = aiFormToken; aiRun++; renderAiBtn();
+  const upisano = []; let nejasanTip = false, greska = '';
+  try{
+    for(const pic of arr.slice(0, 4)){
+      const parts = await picParts([pic], 1600, 0.88);
+      let r;
+      try{ r = await geminiStructuredRequest(AI_GUMA_SYS, parts, AI_GUMA_SCHEMA, 2048, 30000); }
+      catch(err){ greska = (err && err.message) || String(err); continue; }
+      if(tok !== aiFormToken || !sheet.classList.contains('open')) return;
+      const dim = String(r.dimenzija||'').trim(), br = [r.proizvodjac, r.model].map(x=>String(x||'').trim()).filter(Boolean).join(' ');
+      const dot = String(r.dot||'').trim(), god = /^\d{4}$/.test(dot) ? '20'+dot.slice(2) : '';
+      const tip = r.oznaka_3pmsf || r.sezona === 'zimska' ? 'zimska' : r.oznaka_ms ? 'M+S' : r.sezona === 'letnja' ? 'letnja' : '';
+      if(!dim && !br && !god) continue;
+      const digits = dim.replace(/\D/g,'');
+      if(digits.length === 7 && aiPutText('dim', dimFmt(digits))){
+        if(/\d\s*C\b/i.test(dim)) setDimC(true);
+        upisano.push(dimFmt(digits) + (/\d\s*C\b/i.test(dim) ? ' C' : ''));
+      }
+      if(br && aiPutText('proizvodjac', br)) upisano.push(br);
+      if(god && aiPutText('godiste', god)) upisano.push(god+'.');
+      if(!editingId && !tipTouched && !aiMarks.has('tip')){
+        if(tip){ setTip(tip); aiMark('tip'); upisano.push(tip === 'M+S' ? 'M+S' : tip === 'zimska' ? 'Zimska' : 'Letnja'); }
+        else nejasanTip = true;
+      }
+    }
+  } finally {
+    aiRun--; renderAiBtn();
+  }
+  if(tok !== aiFormToken) return;
+  if(upisano.length) showToast('AI je popunio sa slike: '+upisano.join(', ')+' — proveri zeleno označena polja.'+(nejasanTip ? ' Tip gume nije jasan — izaberi sam.' : ''), 6000);
+  else if(greska) showToast('Greška AI: '+greska, 7000);
+  else showToast('Nije pročitano ništa novo sa slike (popunjena polja se ne menjaju).', 5000);
+}
+/* MODUL gemini v6 */
+const GEMINI_RETRY_STATUS = [408,429,500,502,503,504];
+const GEMINI_HEDGE_MS = 3000, GEMINI_HEDGE_PER_MB = 1500;
+function geminiErrorText(body){
+  try{ const j = JSON.parse(body); if(j && j.error && j.error.message) return String(j.error.message); }catch(e){}
+  return String(body||'');
+}
+function geminiHttpError(status, body){
+  if(status===401) return new Error('Google nije prihvatio ključ (401 - neautorizovan). Proveri da li si ključ tačno nalepio u Podešavanjima, ili napravi nov ključ na aistudio.google.com.');
+  if(status===400 && /API key/i.test(body)) return new Error('Gemini API ključ nije važeći. Proveri ga u Podešavanjima.');
+  return new Error('Gemini greška ('+status+'): '+geminiErrorText(body).slice(0,200));
+}
+/* SSE delovi (ili običan JSON) → jedan odgovor oblika generateContent; null = nečitljivo */
+function geminiCollect(txt){
+  const t = String(txt || '').trim();
+  let frames = [];
+  if(t[0] === '{' || t[0] === '['){
+    try{ const j = JSON.parse(t); frames = Array.isArray(j) ? j : [j]; }catch(e){ return null; }
+  } else {
+    t.split(/\r?\n\r?\n/).forEach(ev=>{
+      const d = ev.split(/\r?\n/).filter(l=>l.indexOf('data:') === 0).map(l=>l.slice(5).replace(/^ /, '')).join('\n');
+      if(!d.trim()) return;
+      try{ frames.push(JSON.parse(d)); }catch(e){}
+    });
+  }
+  frames = frames.filter(f=>f && typeof f === 'object');
+  if(!frames.length) return null;
+  const er = frames.find(f=>f.error);
+  if(er) return {error:er.error};
+  let text = '', finish = '', usage = null, pf = null, cand = false, gm = null;
+  frames.forEach(f=>{
+    if(f.promptFeedback) pf = f.promptFeedback;
+    if(f.usageMetadata) usage = f.usageMetadata;
+    const c = (f.candidates || [])[0];
+    if(!c) return;
+    cand = true;
+    if(c.finishReason) finish = c.finishReason;
+    if(c.groundingMetadata) gm = c.groundingMetadata;   /* v4 */
+    ((c.content || {}).parts || []).forEach(p=>{ if(typeof p.text === 'string' && !p.thought) text += p.text; });
+  });
+  const data = {candidates:cand ? [{content:{role:'model', parts:[{text}]}, finishReason:finish}] : [], usageMetadata:usage || {}};
+  if(gm && data.candidates[0]) data.candidates[0].groundingMetadata = gm;
+  if(pf) data.promptFeedback = pf;
+  return {data};
+}
+/* Jedan pokušaj: {st: HTTP kod | 'T' (bez odgovora) | 'N' (mreža) | 'X' (prekinuli smo), res, txt} */
+async function geminiAttempt(model, bodyStr, key, ctl, idleMs, onFirst){
+  let timedOut = false, first = false, idle = null;
+  const armIdle = ()=>{ clearTimeout(idle); idle = setTimeout(()=>{ timedOut = true; ctl.abort(); }, idleMs); };
+  armIdle();
+  try{
+    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':streamGenerateContent?alt=sse',
+      {method:'POST', headers:{'Content-Type':'application/json', 'x-goog-api-key':key}, body:bodyStr, signal:ctl.signal});
+    if(!res.ok){
+      let txt = await res.text();
+      try{ const j = JSON.parse(txt); if(Array.isArray(j) && j[0]) txt = JSON.stringify(j[0]); }catch(e){}
+      return {st:res.status, txt, res:new Response(txt, {status:res.status, headers:{'Content-Type':'application/json'}})};
+    }
+    let s = '';
+    if(res.body && res.body.getReader){
+      const rd = res.body.getReader(), dec = new TextDecoder();
+      for(;;){
+        const r = await rd.read();
+        if(r.done) break;
+        if(r.value && r.value.length){ if(!first){ first = true; if(onFirst) onFirst(); } armIdle(); s += dec.decode(r.value, {stream:true}); }
+      }
+      s += dec.decode();
+    } else s = await res.text();
+    const g = geminiCollect(s);
+    if(!g) return {st:'N'};
+    if(g.error){
+      const st = Number(g.error.code) || 500, txt = JSON.stringify({error:g.error});
+      return {st, txt, res:new Response(txt, {status:st, headers:{'Content-Type':'application/json'}})};
+    }
+    return {st:200, res:new Response(JSON.stringify(g.data), {status:200, headers:{'Content-Type':'application/json'}})};
+  }catch(e){
+    if(timedOut) return {st:'T'};
+    if(ctl.signal.aborted) return {st:'X'};
+    return {st:'N', msg:e && e.message};
+  }finally{ clearTimeout(idle); }
+}
+function geminiFetch(models, body, timeoutMs, think, log, opts){
+  opts = opts || {};
+  const key = getApiKey();
+  const queue = [[models[0],0],[models[1],0],[models[0],1000],[models[1],2000]].filter(x=>x[0]);
+  const cache = {};
+  const bodyFor = m=>{
+    if(cache[m]) return cache[m];
+    let b = body;
+    if(think && think[m]) b = Object.assign({}, body, {generationConfig:Object.assign({}, body.generationConfig || {}, {thinkingConfig:{thinkingLevel:think[m]}})});
+    return (cache[m] = JSON.stringify(b));
+  };
+  const hedgeMs = (models[1] || opts.hedgeSame) && !(think && think[models[0]]) ? (opts.hedgeMs || GEMINI_HEDGE_MS) + Math.round(bodyFor(models[0]).length / 1048576 * GEMINI_HEDGE_PER_MB) : 0;
+  return new Promise((resolve, reject)=>{
+    let next = 0, pending = 0, tries = 0, done = false, lastErr = null, hardErr = null, netMsg = '', pauseTm = null, hedgeTm = null;
+    const live = new Map(), dead = new Set();   /* ctl → {m, t0, first} */
+    const finish = fn=>{ if(done) return; done = true; clearTimeout(pauseTm); clearTimeout(hedgeTm); live.forEach((v, c)=>c.abort()); live.clear(); fn(); };
+    const pick = ()=>{ while(next < queue.length && dead.has(queue[next][0])) next++; return next < queue.length ? queue[next++] : null; };
+    const start = wait=>{
+      const q = pick(); if(!q) return false;
+      pending++;
+      if(wait && q[1]) pauseTm = setTimeout(()=>{ pauseTm = null; if(!done) run(q[0]); }, q[1] + Math.floor(Math.random() * 400));
+      else run(q[0]);
+      return true;
+    };
+    const end = ()=>{
+      const e = hardErr || lastErr;
+      if(e && e.st !== 'T') return finish(()=>{
+        /* v5: uz našu poruku ide i tačan tekst Google-a (v4 ga je sakrivao — pouka Apoteka v57: 429 nije uvek „sačekaj malo“) */
+        const gt = e.txt ? ' Poruka Google-a: ' + geminiErrorText(e.txt).slice(0, 220) : '';
+        if(e.st === 429 && !hardErr) reject(new Error('Google AI je odbio zahtev (429 – ograničenje na tvom nalogu, i na rezervnom modelu).' + gt));
+        else if(GEMINI_RETRY_STATUS.indexOf(e.st) >= 0 && !hardErr) reject(new Error('Google AI je trenutno preopterećen (' + e.st + '). Aplikacija je pokušala ' + tries + ' puta, i sa rezervnim modelom. Probaj ponovo za par minuta.' + gt));
+        else { e.res.geminiModel = e.m; resolve(e.res); }
+      });
+      if(e) return finish(()=>reject(new Error('Server nije odgovorio na vreme. Proveri internet i probaj ponovo.')));
+      finish(()=>reject(new Error('Ne mogu da se povežem sa AI servisom: ' + netMsg)));
+    };
+    async function run(m){
+      const idx = tries++, ctl = new AbortController(), me = {m, t0:Date.now(), first:false};
+      live.set(ctl, me);
+      if(idx === 0 && hedgeMs) hedgeTm = setTimeout(()=>{ hedgeTm = null; if(done || next !== 1) return; if(opts.hedgeSame){ pending++; run(models[0]); } else start(false); }, hedgeMs);
+      const r = await geminiAttempt(m, bodyFor(m), key, ctl, timeoutMs, ()=>{ me.first = true; if(idx === 0 && hedgeTm){ clearTimeout(hedgeTm); hedgeTm = null; } });
+      live.delete(ctl); pending--;
+      if(done || r.st === 'X') return;
+      if(idx === 0 && hedgeTm){ clearTimeout(hedgeTm); hedgeTm = null; }
+      if(r.st === 'N'){ netMsg = r.msg || ''; if(!pending) end(); return; }
+      if(log) log.push({st:r.st, ms:Date.now() - me.t0, m});
+      if(r.st === 200){
+        /* pokušaj koji do pobede drugog nije ni počeo da odgovara ulazi u log kao 'T' (vidi se zašto je čekano) */
+        if(log) live.forEach(v=>{ if(!v.first) log.splice(log.length - 1, 0, {st:'T', ms:Date.now() - v.t0, m:v.m}); });
+        r.res.geminiModel = m;
+        return finish(()=>resolve(r.res));
+      }
+      r.m = m;
+      if(r.st === 'T' || GEMINI_RETRY_STATUS.indexOf(r.st) >= 0){
+        if(r.st === 429) dead.add(m);
+        lastErr = r;
+        if(!pending && (hardErr || !start(true))) end();
+        return;
+      }
+      hardErr = hardErr || r;
+      if(!pending) end();
+    }
+    start(false);
+  });
+}
+const GEMINI_MODEL = 'gemini-3.5-flash-lite';          // kao Zakazivanje v66 (hotel: AI čita gumu)
+const GEMINI_MODEL_BACKUP = 'gemini-3.6-flash';
+async function geminiStructuredRequest(sys, parts, schema, maxOutputTokens, timeoutMs){
+  /* kao Zakazivanje v58: limit važi za razmišljanje + odgovor zajedno, rezervni model razmišlja „low“ */
+  maxOutputTokens = Math.max(maxOutputTokens || 0, 2048);
+  const attempts = [
+    { gc:{ responseFormat:{ text:{ mimeType:'APPLICATION_JSON', schema: schema } }, maxOutputTokens: maxOutputTokens } },
+    { gc:{ responseMimeType:'application/json', responseJsonSchema: schema, maxOutputTokens: maxOutputTokens } },
+    { gc:{ responseMimeType:'application/json', maxOutputTokens: maxOutputTokens } }
+  ];
+  let resp;
+  for(let i=0; i<attempts.length; i++){
+    resp = await geminiFetch([GEMINI_MODEL, GEMINI_MODEL_BACKUP], {
+      systemInstruction: { parts: [{ text: sys }] },
+      contents: [{ role:'user', parts: parts }],
+      generationConfig: attempts[i].gc
+    }, timeoutMs, { [GEMINI_MODEL_BACKUP]: 'low' });
+    if(resp.ok) break;
+    const errBody = await resp.text().catch(()=> '');
+    if(resp.status===400 && !/API key/i.test(errBody) && i < attempts.length-1) continue;
+    throw geminiHttpError(resp.status, errBody);
+  }
+  const data = await resp.json();
+  const candidate = data.candidates && data.candidates[0];
+  if(!candidate) throw new Error('Gemini nije vratio rezultat.');
+  const raw = (candidate.content && candidate.content.parts && candidate.content.parts[0] && candidate.content.parts[0].text) || '';
+  let result;
+  try{ result = JSON.parse(raw); }catch(e){ throw new Error('Ne mogu da protumačim AI odgovor.'); }
+  if(Array.isArray(result)) result = result[0] || {};
+  return result || {};
+}
 
 // ---------- SALE MODAL ----------
 const saleSheet = document.getElementById('saleSheet');
@@ -1700,7 +2287,7 @@ let settingsCloseFn = null;   // nivo 1: ekran sa pločicama
 let settingsSubFn = null;     // nivo 2: otvoren pod-ekran
 const SETTINGS_BACK_SVG = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
 const NUM_ATTR = 'inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"';
-const APP_VERSION = 7;
+const APP_VERSION = 8;
 function daniRec(n){ return (n%10===1 && n%100!==11) ? 'dan' : 'dana'; }
 function settingsTile(icon, title, sub, onclick, extraClass){
   return '<button type="button" class="set-tile'+(extraClass?' '+extraClass:'')+'" onclick="'+onclick+'">'+
@@ -1731,6 +2318,7 @@ function renderSettingsTiles(){
     settingsTile('🎨', 'Tema', themeName(getTheme()), "openSettingsSub('theme')")+
     settingsTile('💾', 'Rezervna kopija', last ? 'Poslednja: '+fmtDateSrFromDate(last) : 'Još nije napravljena', "openSettingsSub('backup')")+
     settingsTile('⏰', 'Podsetnik za bekap', n === 1 ? 'Svaki dan' : 'Na svakih '+n+' '+daniRec(n), "openSettingsSub('reminder')")+
+    settingsTile('🔑', 'Gemini API ključ', getApiKey() ? 'Ključ je unet' : 'Ključ nije unet', "openSettingsSub('apikey')")+
     settingsTile('📊', 'Uvoz iz Excel / CSV', 'Excel ili CSV fajl', "openSettingsSub('excel')")+
     settingsTile('⚠️', 'Brisanje', 'Stanje i istorija prodaje', "openSettingsSub('wipe')", 'danger')+
     '<div class="app-version">verzija '+APP_VERSION+'</div>');
@@ -1757,6 +2345,12 @@ function openSettingsSub(key){
     title = 'Uvoz iz Excel / CSV';
     body = '<label class="file-btn" for="importExcelInput">Uvezi Excel/CSV fajl</label>'+
       '<div class="settings-hint">Prepoznaje kolone po nazivu (vrsta, proizvođač, dimenzije, šara dubina, količina, godište, cena, napomena). Posle učitavanja pitaće te da li da zameni ili doda uz postojeće stanje.</div>';
+  } else if(key === 'apikey'){
+    title = 'Gemini API ključ';
+    body = '<div class="field"><label for="sApiKey">Google Gemini API ključ</label>'+
+      '<input id="sApiKey" type="password" enterkeyhint="done" onkeydown="if(event.key===\'Enter\'){ event.preventDefault(); saveApiKeySetting(); }" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="'+escapeHtml(getApiKey())+'" placeholder="AIza..."></div>'+
+      '<button type="button" class="btn primary wide" onclick="saveApiKeySetting()">Sačuvaj</button>'+
+      '<div class="settings-hint">Potreban je da AI pročita gumu sa slike. Ključ se čuva samo na ovom telefonu i ne ide u bekap. Isti ključ kao u Zakazivanju ili Kućnoj apoteci: kopiraj ga odande (Podešavanja) i nalepi ovde.</div>';
   } else if(key === 'wipe'){
     title = 'Brisanje';
     body = '<button type="button" class="btn danger wide" id="wipeItemsBtn" onclick="wipeItems()">Obriši kompletno stanje</button>'+
@@ -1766,6 +2360,12 @@ function openSettingsSub(key){
   if(key === 'backup') updateLastBackupInfo();
   settingsSubFn = () => { settingsSubFn = null; renderSettingsTiles(); };
   pushOverlay(settingsSubFn);
+}
+function saveApiKeySetting(){
+  const el = document.getElementById('sApiKey'); if(!el) return;
+  const v = String(fieldVal(el)||'').trim();
+  try{ if(v) localStorage.setItem(LS_APIKEY, v); else localStorage.removeItem(LS_APIKEY); }catch(e){ showToast('Greška: ključ nije sačuvan'); return; }
+  el.blur(); showToast(v ? 'Gemini API ključ je sačuvan' : 'Gemini API ključ je obrisan');
 }
 function settingsBack(){
   if(settingsSubFn){ closeOverlay(settingsSubFn); return; }
@@ -1781,7 +2381,8 @@ document.getElementById('settingsBtn').addEventListener('click', openSettings);
 
 // ---------- BACKUP: export ----------
 function doExportBackup(){
-  const payload = { exportedAt: new Date().toISOString(), items, sales, theme: getTheme(), backupIntervalDays: getBackupIntervalDays() };
+  const payload = { exportedAt: new Date().toISOString(), items, sales, theme: getTheme(), backupIntervalDays: getBackupIntervalDays(),
+    slike: [...SLIKE].map(([id, sl]) => ({ id, slike: sl })) };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -1828,6 +2429,7 @@ document.getElementById('importBackupInput').addEventListener('change', (e) => {
           if(typeof data.theme === 'string' && validTheme(data.theme)) setTheme(data.theme);
           const bi = parseInt(data.backupIntervalDays);
           if(bi > 0) setBackupIntervalDays(bi);
+          if(Array.isArray(data.slike)) Slike.zameniSve(data.slike);
           persistItems();
           persistSales();
           renderStanje();
