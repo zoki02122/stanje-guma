@@ -224,6 +224,34 @@
   .note-top{display:none;position:fixed;top:0;left:0;right:0;z-index:60;padding:calc(8px + env(safe-area-inset-top)) 12px 0;height:calc(var(--note-h) + env(safe-area-inset-top));box-sizing:border-box;background:var(--bg);pointer-events:none;}
   .note-top.on{display:block;}
   .app-version{text-align:center;color:var(--muted);font-size:13px;margin:22px 0 6px;}
+  /* v11: dnevnik grešaka, korpa, brisanje prevlačenjem (uzor Gde sam ostavio) */
+  .app-version .err-count{display:block;margin:4px auto 0;padding:4px 8px;border:none;background:none;font:inherit;font-size:13px;font-weight:600;color:var(--red);cursor:pointer;}
+  .err-row{padding:12px 0;border-bottom:1px solid var(--line);}
+  .err-row .err-meta{font-size:12.5px;font-weight:600;color:var(--muted);}
+  .err-row .err-msg{font-size:15px;color:var(--text);margin-top:3px;line-height:1.35;overflow-wrap:anywhere;}
+  .err-actions{display:flex;gap:10px;margin:4px 0 6px;}
+  .err-actions .btn{flex:1;}
+  #list{position:relative;}
+  #list > .card{z-index:1;touch-action:pan-y;}
+  #list > .card.sw-anim{transition:transform .2s ease;}
+  .sw-del{position:absolute;width:96px;box-sizing:border-box;border:none;z-index:0;background:#FF0000;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0 0 0 12px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+  .sw-del svg{width:24px;height:24px;}
+  .trash-top{display:flex;justify-content:space-between;align-items:center;margin:4px 2px 8px;}
+  .trash-link{background:none;border:none;padding:8px 4px;font-family:inherit;font-size:15px;font-weight:700;color:var(--accent);cursor:pointer;}
+  .trash-link.danger{color:var(--red);}
+  .trash-item{display:flex;align-items:center;gap:12px;padding:12px;margin-bottom:8px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line);cursor:pointer;}
+  .trash-item.sel{border-color:var(--accent);}
+  .trash-check{width:24px;height:24px;flex:none;box-sizing:border-box;border-radius:7px;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:var(--on-act);}
+  .trash-item.sel .trash-check{background:var(--act-bg);border-color:var(--accent);}
+  .trash-tx{min-width:0;flex:1;}
+  .trash-name{font-size:16px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .trash-sub{font-size:12.5px;color:var(--muted);margin-top:3px;}
+  .trash-bar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:47;gap:10px;padding:12px 14px calc(14px + env(safe-area-inset-bottom));background:var(--bg);border-top:1px solid var(--line);box-sizing:border-box;}
+  .trash-bar.show{display:flex;}
+  .settings-screen.has-trash-bar{padding-bottom:calc(100px + env(safe-area-inset-bottom));}
+  .trash-bar button{flex:1;padding:14px 10px;border-radius:12px;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;}
+  .trash-bar .trash-restore{background:var(--act-bg);border:1px solid var(--act-line);color:var(--on-act);}
+  .trash-bar .trash-purge{background:transparent;border:1.5px solid var(--red);color:var(--red);}
   .note-bar{max-width:616px;margin:0 auto;height:92px;box-sizing:border-box;display:flex;align-items:center;gap:14px;padding:0 16px;border-radius:14px;background:color-mix(in srgb, var(--note-c) 25%, var(--bg));border:1.5px solid color-mix(in srgb, var(--note-c) 55%, var(--bg));color:var(--text);font-size:21px;font-weight:600;line-height:1.2;overflow:hidden;}
   .note-bar .note-ic{flex:none;width:40px;height:40px;box-sizing:border-box;border-radius:50%;border:2px solid var(--note-c);color:var(--note-c);display:flex;align-items:center;justify-content:center;}
   .note-bar svg{flex:none;}
@@ -232,7 +260,7 @@
   body.noting #app{padding-top:var(--note-h);}
   body.noting header{top:var(--note-h);}
   body.noting .settings-screen{padding-top:var(--note-h);}
-  body.noting .set-header{top:var(--note-h);}
+  /* v11: .set-header bez dodatnog top (padding ekrana već pomera; dupli pomeraj je prekrivao prvo polje) */
   :is([data-theme="ponoc"],[data-theme="ponoc-srebro"]){--note-c:var(--accent);}
   :is([data-theme="banka"],[data-theme="koza"]){--note-c:var(--hi-text);}
 
@@ -851,7 +879,235 @@ function loadAll(){
     document.getElementById('warnBanner').style.display = 'block';
   }
 }
-function persistItems(){ if(!safeSet(LS_ITEMS, items)) showToast('Upozorenje: nije sačuvano trajno'); if(window.slikePocisti) window.slikePocisti(); }
+/* MODUL dnevnik-gresaka v1 */
+/* v11 (Zoran 24.11.: „to je to“): poslednjih 20 grešaka sa ovog telefona (JS greške, AI, kamera, upis, uvoz), sa vremenom, verzijom i mestom.
+   Vidi se tek kad ih ima: „N greške“ ispod verzije u Podešavanjima → „Dnevnik grešaka“ (Kopiraj / Obriši dnevnik). Ne ide u bekap. */
+const ERRLOG_KEY = 'stanjeGuma_errlog', ERRLOG_MAX = 20;
+function getErrLog(){ try{ const v = localStorage.getItem(ERRLOG_KEY); const a = v ? JSON.parse(v) : []; return Array.isArray(a) ? a : []; }catch(e){ return []; } }
+function logError(where, msg){
+  try{
+    const list = getErrLog();
+    list.unshift({ at: new Date().toISOString(), v: (typeof APP_VERSION!=='undefined' ? APP_VERSION : 0), where: String(where||''), msg: String(msg||'').slice(0,400) });
+    localStorage.setItem(ERRLOG_KEY, JSON.stringify(list.slice(0, ERRLOG_MAX)));
+  }catch(e){}
+  try{ updateErrBadge(); }catch(e){}
+}
+window.addEventListener('error', (e)=>{
+  if(!e || !e.message) return;
+  const f = e.filename ? ' — '+String(e.filename).split('/').pop().split('?')[0]+':'+e.lineno : '';
+  logError('aplikacija', e.message + f);
+});
+window.addEventListener('unhandledrejection', (e)=>{
+  const r = e && e.reason; logError('aplikacija', (r && r.message) ? r.message : String(r));
+});
+function greskeRec(n){ const d=n%10, s=n%100; if(d===1 && s!==11) return 'greška'; if(d>=2 && d<=4 && (s<12 || s>14)) return 'greške'; return 'grešaka'; }
+function errBadgeHtml(){ const n = getErrLog().length; return n ? '<button type="button" class="err-count" id="errCount" onclick="openSettingsSub(\'errlog\')">'+n+' '+greskeRec(n)+'</button>' : ''; }
+function updateErrBadge(){ const v = document.querySelector('#settingsScreen #appVer'); if(v) v.innerHTML = 'verzija '+APP_VERSION+errBadgeHtml(); }
+function errTimeText(iso){ const d = new Date(iso), p = n=>String(n).padStart(2,'0'); return p(d.getDate())+'.'+p(d.getMonth()+1)+'. '+p(d.getHours())+':'+p(d.getMinutes()); }
+function errLogText(){ return getErrLog().map(x=> errTimeText(x.at)+' · v'+x.v+' · '+x.where+'\n'+x.msg).join('\n\n'); }
+function errLogBodyHtml(){
+  const list = getErrLog();
+  if(!list.length) return '<div class="settings-hint">Nema zabeleženih grešaka.</div>';
+  return '<div class="settings-hint" style="margin-bottom:10px;">Greške koje se dese na ovom telefonu. Kad nešto ne radi kako treba, dodirni „Kopiraj“ i nalepi tekst u čet sa Claude-om.</div>'+
+    '<div class="err-actions"><button type="button" class="btn primary" id="errCopyBtn" onclick="copyErrLog()">Kopiraj</button><button type="button" class="btn" id="errClearBtn" onclick="clearErrLog()">Obriši dnevnik</button></div>'+
+    list.map(x=>'<div class="err-row"><div class="err-meta">'+escapeHtml(errTimeText(x.at)+' · v'+x.v+' · '+x.where)+'</div><div class="err-msg">'+escapeHtml(x.msg)+'</div></div>').join('');
+}
+function copyErrLog(){
+  const txt = 'Stanje guma — dnevnik grešaka\n\n'+errLogText();
+  const ok = ()=> showToast('Dnevnik je kopiran — nalepi ga u čet.');
+  const fallback = ()=>{
+    const ta = document.createElement('textarea'); ta.value = txt; ta.setAttribute('readonly',''); ta.style.cssText='position:fixed;top:-1000px;opacity:0;';
+    document.body.appendChild(ta); ta.select(); let done = false; try{ done = document.execCommand('copy'); }catch(e){}
+    ta.remove(); if(done) ok(); else showToast('Greška: kopiranje nije uspelo.');
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(ok, fallback); else fallback();
+}
+function clearErrLog(){
+  showConfirm({ title:'Obriši dnevnik', message:'Obrisati dnevnik grešaka?', confirmLabel:'Obriši', danger:true, onConfirm:()=>{
+    try{ localStorage.removeItem(ERRLOG_KEY); }catch(e){}
+    updateErrBadge(); const bd = document.getElementById('setBody'); if(bd) bd.innerHTML = errLogBodyHtml();
+    showToast('Dnevnik je obrisan.');
+  }});
+}
+
+/* ---------- KORPA (v11, uzor Gde sam ostavio; Zoranova odluka 14.10.: svaka aplikacija ima korpu) ----------
+   Obrisana guma (cela, sa slikama i strelicama) čeka u korpi zadati broj dana (30), pa se trajno briše pri otvaranju korpe.
+   Korpa NE ide u bekap. Ključevi: stanjeGuma_trash, stanjeGuma_trashDays. Slike ostaju u IndexedDB dok je guma u korpi (Slike.pocisti). */
+const TRASH_KEY = 'stanjeGuma_trash', TRASH_DAYS_KEY = 'stanjeGuma_trashDays';
+let trashSel = new Set();
+function getTrash(){ try{ const a = JSON.parse(localStorage.getItem(TRASH_KEY) || '[]'); return Array.isArray(a) ? a : []; }catch(e){ return []; } }
+function setTrash(list){ try{ localStorage.setItem(TRASH_KEY, JSON.stringify(list)); return true; }catch(e){ logError('korpa', 'Korpa nije sačuvana (memorija telefona)'); return false; } }
+function getTrashDays(){ let n = NaN; try{ n = parseInt(localStorage.getItem(TRASH_DAYS_KEY)); }catch(e){} return n > 0 ? n : 30; }
+function trashAdd(it){
+  const list = getTrash().filter(x=>x.id!==it.id);
+  list.push({ id: it.id, deletedAt: Date.now(), item: JSON.parse(JSON.stringify(it)) });
+  return setTrash(list);
+}
+function trashDaysLeft(x){ return Math.max(0, getTrashDays() - Math.floor((Date.now() - x.deletedAt) / 86400000)); }
+function trashDropPics(ids){ ids.forEach(id=>{ if(SLIKE.has(id) && !items.some(i=>i.id===id)) Slike.postavi(id, null); }); }
+function trashPurgeExpired(){
+  const list = getTrash(); const keep = list.filter(x=>trashDaysLeft(x) > 0);
+  if(keep.length !== list.length && setTrash(keep)) trashDropPics(list.filter(x=>trashDaysLeft(x) <= 0).map(x=>x.id));
+}
+function gumaRec(n){ const d=n%10, s=n%100; return (d>=2 && d<=4 && (s<12 || s>14)) ? 'gume' : 'guma'; }
+function trashTileSub(){ const n = getTrash().length; return n ? n+' '+gumaRec(n)+' u korpi' : 'Prazna'; }
+function trashName(it){ return [it.dimenzije, it.proizvodjac].filter(Boolean).join(' · ') || '(bez dimenzije)'; }
+/* brisanje gume (prozor gume ili prevlačenje): PRVO upis u korpu; ako telefon nema mesta, guma se NE briše */
+function deleteToTrash(id){
+  const it = items.find(i=>i.id===id); if(!it) return false;
+  if(!trashAdd(it)){ showToast('Greška: brisanje nije uspelo — nema mesta za korpu. Isprazni korpu u Podešavanjima.', 6000); return false; }
+  items = items.filter(i=>i.id!==id);
+  persistItems(); renderStanje();
+  showToast('„'+trashName(it)+'“ je u korpi.');
+  return true;
+}
+function openTrashScreen(){
+  if(!settingsCloseFn || settingsSubFn) return;
+  trashPurgeExpired();
+  trashSel = new Set();
+  setSettingsView('Korpa',
+    '<div class="field"><label for="trashDaysInput">Čuvaj obrisano (dana)</label>'+
+    '<input type="number" id="trashDaysInput" min="1" '+NUM_ATTR+' value="'+getTrashDays()+'" oninput="saveTrashDays(this.value)"></div>'+
+    '<div class="settings-hint" style="margin-bottom:14px;">Obrisane gume čekaju ovde toliko dana, pa se same trajno brišu.</div>'+
+    '<div id="trashList"></div>');
+  const sc = document.getElementById('settingsScreen');
+  const bar = document.createElement('div'); bar.className = 'trash-bar'; bar.id = 'trashBar';
+  bar.innerHTML = '<button type="button" class="trash-restore" id="trashRestoreBtn" onclick="trashRestoreSelected()"></button>'+
+    '<button type="button" class="trash-purge" id="trashPurgeBtn" onclick="trashPurgeSelected()"></button>';
+  if(sc) sc.appendChild(bar);
+  renderTrashList();
+  settingsSubFn = ()=>{ settingsSubFn = null; renderSettingsTiles(); };
+  pushOverlay(settingsSubFn);
+}
+function saveTrashDays(val){ const n = parseInt(val); if(!(n > 0)) return; try{ localStorage.setItem(TRASH_DAYS_KEY, String(n)); }catch(e){} renderTrashList(); }
+function renderTrashList(){
+  const box = document.getElementById('trashList'), bar = document.getElementById('trashBar');
+  if(!box) return;
+  const list = getTrash();
+  trashSel = new Set(Array.from(trashSel).filter(id=>list.some(x=>x.id===id)));
+  const sc = document.getElementById('settingsScreen');
+  const n = trashSel.size;
+  if(bar) bar.classList.toggle('show', n > 0);
+  if(sc) sc.classList.toggle('has-trash-bar', n > 0);
+  if(!list.length){ box.innerHTML = '<div class="settings-hint" style="padding-top:10px;">Korpa je prazna.</div>'; return; }
+  const allSel = n === list.length;
+  box.innerHTML = '<div class="trash-top"><button type="button" class="trash-link" onclick="trashToggleAll()">'+(allSel?'Poništi izbor':'Izaberi sve')+'</button>'+
+    '<button type="button" class="trash-link danger" onclick="trashEmptyAll()">Isprazni korpu</button></div>'+
+    list.slice().sort((a,b)=>b.deletedAt-a.deletedAt).map(x=>{
+      const left = trashDaysLeft(x), it = x.item || {};
+      const leftTx = left <= 1 ? 'briše se danas' : 'još '+left+' '+daniRec(left);
+      const sel = trashSel.has(x.id);
+      return '<div class="trash-item'+(sel?' sel':'')+'" data-id="'+escapeHtml(x.id)+'" onclick="trashToggle(this.dataset.id)">'+
+        '<span class="trash-check">'+(sel?'✓':'')+'</span>'+
+        '<div class="trash-tx"><div class="trash-name">'+escapeHtml(trashName(it))+'</div>'+
+        '<div class="trash-sub">'+escapeHtml((parseInt(it.kolicina)||0)+' kom · '+leftTx)+'</div></div></div>';
+    }).join('');
+  const rb = document.getElementById('trashRestoreBtn'), pb = document.getElementById('trashPurgeBtn');
+  if(rb) rb.textContent = 'Vrati ('+n+')';
+  if(pb) pb.textContent = 'Obriši trajno ('+n+')';
+}
+function trashToggle(id){ if(trashSel.has(id)) trashSel.delete(id); else trashSel.add(id); renderTrashList(); }
+function trashToggleAll(){ const list = getTrash(); trashSel = trashSel.size===list.length ? new Set() : new Set(list.map(x=>x.id)); renderTrashList(); }
+function trashRestoreSelected(){
+  const all = getTrash(), chosen = all.filter(x=>trashSel.has(x.id));
+  if(!chosen.length) return;
+  chosen.forEach(x=>{
+    const it = JSON.parse(JSON.stringify(x.item));
+    if(items.some(i=>i.id===it.id)){   /* isti id već postoji: nova oznaka, slike prelaze uz gumu */
+      const nid = uid();
+      if(SLIKE.has(it.id)) Slike.postavi(nid, SLIKE.get(it.id));
+      it.id = nid;
+    }
+    items.unshift(it);
+  });
+  setTrash(all.filter(x=>!trashSel.has(x.id)));
+  persistItems();
+  trashSel = new Set();
+  renderStanje(); renderTrashList();
+  showToast(chosen.length===1 ? 'Vraćeno na stanje: '+trashName(chosen[0].item) : 'Vraćeno na stanje: '+chosen.length+' '+gumaRec(chosen.length));
+}
+function trashPurgeSelected(){
+  const n = trashSel.size; if(!n) return;
+  showConfirm({ title:'Obriši trajno', message:'Trajno obrisati izabrano ('+n+')? Ovo se više ne može vratiti.', confirmLabel:'Obriši trajno', danger:true, onConfirm:()=>{
+    const ids = Array.from(trashSel);
+    if(setTrash(getTrash().filter(x=>!trashSel.has(x.id)))) trashDropPics(ids);
+    trashSel = new Set(); renderTrashList();
+  }});
+}
+function trashEmptyAll(){
+  const n = getTrash().length; if(!n) return;
+  showConfirm({ title:'Isprazni korpu', message:'Isprazniti korpu ('+n+' '+gumaRec(n)+')? Ovo se više ne može vratiti.', confirmLabel:'Isprazni', danger:true, onConfirm:()=>{
+    const ids = getTrash().map(x=>x.id);
+    if(setTrash([])) trashDropPics(ids);
+    trashSel = new Set(); renderTrashList();
+  }});
+}
+
+/* brisanje prevlačenjem ulevo (uzor Gde sam ostavio v52 / Arhiva v122): kartica → crveno „Izbriši“ → potvrda → korpa */
+const SW_W = 84;
+let _swOpen = null;
+function swClose(anim){
+  const o = _swOpen; if(!o) return; _swOpen = null;
+  o.tile._swBase = 0;
+  o.tile.classList.toggle('sw-anim', anim !== false); o.tile.style.transform = '';
+  setTimeout(()=>{ o.del.remove(); o.tile.classList.remove('sw-anim'); }, anim === false ? 0 : 220);
+}
+function swipeToDelete(tile, id){
+  let x0 = 0, y0 = 0, on = false, dx = 0, track = false;
+  const mkDel = ()=>{
+    const d = document.createElement('button');
+    d.type = 'button'; d.className = 'sw-del';
+    d.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"></path><path d="M10 11v6M14 11v6"></path></svg><span>Izbriši</span>';
+    d.style.top = tile.offsetTop + 'px'; d.style.height = tile.offsetHeight + 'px';
+    d.style.left = (tile.offsetLeft + tile.offsetWidth - 96) + 'px';
+    const r = getComputedStyle(tile); d.style.borderRadius = '0 '+r.borderTopRightRadius+' '+r.borderBottomRightRadius+' 0';
+    d.onclick = (e)=>{ e.stopPropagation(); swClose(); confirmSwipeDelete(id); };
+    tile.parentNode.appendChild(d);
+    return d;
+  };
+  tile.addEventListener('pointerdown', (e)=>{ x0 = e.clientX; y0 = e.clientY; dx = 0; on = false; track = true; tile.dataset.suppressClick = ''; });
+  tile.addEventListener('pointermove', (e)=>{
+    if(!track) return;
+    const mx = e.clientX - x0, my = e.clientY - y0;
+    if(!on){
+      if(Math.abs(mx) < 10 || Math.abs(mx) < Math.abs(my) * 1.5) return;
+      on = true;
+      if(_swOpen && _swOpen.tile !== tile) swClose();
+      if(!_swOpen) _swOpen = {tile, del: mkDel()};
+      try{ tile.setPointerCapture(e.pointerId); }catch(err){}
+      tile.classList.remove('sw-anim');
+    }
+    dx = Math.max(-SW_W * 1.25, Math.min(0, (tile._swBase || 0) + mx));
+    tile.style.transform = 'translateX(' + dx + 'px)';
+  });
+  tile.addEventListener('pointerup', ()=>{
+    track = false;
+    if(!on) return;
+    on = false; tile.dataset.suppressClick = '1';
+    setTimeout(()=>{ tile.dataset.suppressClick = ''; }, 450);
+    tile.classList.add('sw-anim');
+    if(dx < -SW_W / 2){ tile.style.transform = 'translateX(' + (-SW_W) + 'px)'; tile._swBase = -SW_W; }
+    else swClose();
+  });
+  tile.addEventListener('pointercancel', ()=>{ if(on){ on = false; track = false; swClose(); } else track = false; });
+  /* posle prevlačenja dodir ne otvara gumu; dodir na otvorenu karticu je samo zatvara */
+  tile.addEventListener('click', (e)=>{
+    if(tile.dataset.suppressClick === '1'){ e.stopImmediatePropagation(); e.preventDefault(); tile.dataset.suppressClick = ''; return; }
+    if(_swOpen && _swOpen.tile === tile){ e.stopImmediatePropagation(); e.preventDefault(); swClose(); }
+  }, true);
+}
+document.addEventListener('pointerdown', (e)=>{
+  if(!_swOpen) return;
+  if(e.target.closest('.sw-del') || _swOpen.tile.contains(e.target)) return;
+  swClose();
+}, true);
+function confirmSwipeDelete(id){
+  const it = items.find(i=>i.id===id); if(!it) return;
+  showConfirm({ title:'Obriši gumu', message:'Obrisati „'+trashName(it)+'“? Ide u korpu, odakle može da se vrati.', confirmLabel:'Obriši', danger:true,
+    onConfirm:()=>{ deleteToTrash(id); } });
+}
+
+function persistItems(){ if(!safeSet(LS_ITEMS, items)){ logError('upis', 'Stanje nije sačuvano (memorija telefona)'); showToast('Upozorenje: nije sačuvano trajno'); } if(window.slikePocisti) window.slikePocisti(); }
 function persistSales(){ if(!safeSet(LS_SALES, sales)) showToast('Upozorenje: nije sačuvano trajno'); }
 
 // ---------- BACKUP REMINDER ----------
@@ -997,6 +1253,7 @@ function dimSortKey(item){
 }
 
 function renderStanje(){
+  _swOpen = null;
   const list = document.getElementById('list');
   const filtered = items.filter(matchesFilter).sort((a,b) => {
     const ka = dimSortKey(a), kb = dimSortKey(b);
@@ -1033,6 +1290,7 @@ function renderStanje(){
 
   list.querySelectorAll('.card').forEach(card => {
     const id = card.dataset.id;
+    swipeToDelete(card, id);
     card.addEventListener('click', (e) => {
       if(e.target.closest('[data-act="sell"]')) return;
       openEdit(id);
@@ -1351,17 +1609,10 @@ document.getElementById('deleteBtn').addEventListener('click', () => {
   if(!editingId) return;
   showConfirm({
     title: 'Obriši gumu',
-    message: 'Obrisati ovu gumu iz evidencije?',
+    message: 'Obrisati ovu gumu? Ide u korpu, odakle može da se vrati.',
     confirmLabel: 'Obriši',
     danger: true,
-    onConfirm: () => {
-      items = items.filter(i => i.id !== editingId);
-      persistItems();
-      Slike.postavi(editingId, null);
-      renderStanje();
-      closeOverlay(closeSheet);
-      showToast('Obrisano');
-    }
+    onConfirm: () => { if(deleteToTrash(editingId)) closeOverlay(closeSheet); }
   });
 });
 
@@ -1398,7 +1649,7 @@ const Slike = (function(){
       SLIKE.clear(); (list||[]).forEach(r=>{ if(r && r.id && Array.isArray(r.slike) && r.slike.length) SLIKE.set(r.id, r.slike.slice()); });
       return run('readwrite', st=>{ st.clear(); SLIKE.forEach((v,k)=>st.put({ id:k, slike:v })); }).then(()=>true, fail);
     },
-    pocisti(){ const ids = new Set(items.map(i=>i.id)); [...SLIKE.keys()].forEach(k=>{ if(!ids.has(k)) this.postavi(k, null); }); }
+    pocisti(){ const ids = new Set(items.map(i=>i.id).concat(getTrash().map(x=>x.id))); [...SLIKE.keys()].forEach(k=>{ if(!ids.has(k)) this.postavi(k, null); }); }
   };
 })();
 Slike.ucitaj().then(()=>{ Slike.pocisti(); window.slikePocisti = ()=>Slike.pocisti(); });
@@ -1473,6 +1724,7 @@ async function openCamera(){
     if(!camCloseFn){ camStream.getTracks().forEach(t=>t.stop()); camStream = null; return; }
     const v = document.getElementById('camVideo'); v.srcObject = camStream; await v.play().catch(()=>{});
   }catch(e){
+    logError('kamera', ((e && e.name) || '')+': '+((e && e.message) || ''));
     closeCamera();
     showToast(e && e.name==='NotAllowedError' ? 'Nije dozvoljena kamera u aplikaciji — otvaram kameru telefona (dozvola: katanac pored adrese → Kamera).' : 'Nije uspela kamera u aplikaciji — otvaram kameru telefona.', 6000);
     pickFiles(true);
@@ -1498,7 +1750,7 @@ async function camTake(){
       const cnt = document.getElementById('camCount'); if(cnt) cnt.textContent = 'Slikano: '+camShots.length;
       const th = document.getElementById('camThumbs'); if(th) th.innerHTML = camShots.slice(-3).map(p=>'<img src="'+p+'">').join('');
     }
-  }catch(e){ showToast('Greška: slikanje nije uspelo.'); }
+  }catch(e){ logError('slikanje', (e && e.message) || String(e)); showToast('Greška: slikanje nije uspelo.'); }
   camBusy = false;
   const b2 = document.getElementById('camShot'); if(b2) b2.disabled = false;
 }
@@ -1797,7 +2049,7 @@ async function aiCitaj(arr){
       const parts = await picParts([pic], 1600, 0.88);
       let r;
       try{ r = await geminiStructuredRequest(AI_GUMA_SYS, parts, AI_GUMA_SCHEMA, 2048, 30000); }
-      catch(err){ greska = (err && err.message) || String(err); continue; }
+      catch(err){ greska = (err && err.message) || String(err); logError('AI čitanje gume', greska); continue; }
       if(tok !== aiFormToken || !sheet.classList.contains('open')) return;
       const dim = String(r.dimenzija||'').trim(), br = [r.proizvodjac, r.model].map(x=>String(x||'').trim()).filter(Boolean).join(' ');
       const dot = String(r.dot||'').trim(), god = /^\d{4}$/.test(dot) ? '20'+dot.slice(2) : '';
@@ -2424,7 +2676,7 @@ let settingsCloseFn = null;   // nivo 1: ekran sa pločicama
 let settingsSubFn = null;     // nivo 2: otvoren pod-ekran
 const SETTINGS_BACK_SVG = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
 const NUM_ATTR = 'inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"';
-const APP_VERSION = 10;
+const APP_VERSION = 11;
 function daniRec(n){ return (n%10===1 && n%100!==11) ? 'dan' : 'dana'; }
 function settingsTile(icon, title, sub, onclick, extraClass){
   return '<button type="button" class="set-tile'+(extraClass?' '+extraClass:'')+'" onclick="'+onclick+'">'+
@@ -2446,7 +2698,8 @@ function openSettings(){
 function setSettingsView(title, bodyHtml){
   const t = document.getElementById('setTitle'), bd = document.getElementById('setBody'), sc = document.getElementById('settingsScreen');
   if(!t || !bd) return;
-  t.textContent = title; bd.innerHTML = bodyHtml; if(sc) sc.scrollTop = 0;
+  t.textContent = title; bd.innerHTML = bodyHtml; if(sc){ sc.scrollTop = 0; sc.classList.remove('has-trash-bar'); }
+  const tb = document.getElementById('trashBar'); if(tb) tb.remove();
 }
 function renderSettingsTiles(){
   const last = getLastBackupDate();
@@ -2457,8 +2710,9 @@ function renderSettingsTiles(){
     settingsTile('⏰', 'Podsetnik za bekap', n === 1 ? 'Svaki dan' : 'Na svakih '+n+' '+daniRec(n), "openSettingsSub('reminder')")+
     settingsTile('🔑', 'Gemini API ključ', getApiKey() ? 'Ključ je unet' : 'Ključ nije unet', "openSettingsSub('apikey')")+
     settingsTile('📊', 'Uvoz iz Excel / CSV', 'Excel ili CSV fajl', "openSettingsSub('excel')")+
+    settingsTile('🗑', 'Korpa', trashTileSub(), "openTrashScreen()")+
     settingsTile('⚠️', 'Brisanje', 'Stanje i istorija prodaje', "openSettingsSub('wipe')", 'danger')+
-    '<div class="app-version">verzija '+APP_VERSION+'</div>');
+    '<div class="app-version" id="appVer">verzija '+APP_VERSION+errBadgeHtml()+'</div>');
 }
 function openSettingsSub(key){
   if(!settingsCloseFn || settingsSubFn) return;
@@ -2488,6 +2742,9 @@ function openSettingsSub(key){
       '<input id="sApiKey" type="password" enterkeyhint="done" onkeydown="if(event.key===\'Enter\'){ event.preventDefault(); saveApiKeySetting(); }" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="'+escapeHtml(getApiKey())+'"></div>'+
       '<button type="button" class="btn primary wide" onclick="saveApiKeySetting()">Sačuvaj</button>'+
       '<div class="settings-hint">Potreban je da AI pročita gumu sa slike. Ključ se čuva samo na ovom telefonu i ne ide u bekap. Isti ključ kao u Zakazivanju ili Kućnoj apoteci: kopiraj ga odande (Podešavanja) i nalepi ovde.</div>';
+  } else if(key === 'errlog'){
+    title = 'Dnevnik grešaka';
+    body = errLogBodyHtml();
   } else if(key === 'wipe'){
     title = 'Brisanje';
     body = '<button type="button" class="btn danger wide" id="wipeItemsBtn" onclick="wipeItems()">Obriši kompletno stanje</button>'+
@@ -2577,6 +2834,7 @@ document.getElementById('importBackupInput').addEventListener('change', (e) => {
         }
       });
     }catch(err){
+      logError('uvoz bekapa', (err && err.message) || String(err));
       showToast('Greška pri čitanju fajla');
     }
   };
@@ -2650,6 +2908,7 @@ document.getElementById('importExcelInput').addEventListener('change', (e) => {
       document.getElementById('excelChoiceSub').textContent = `Pronađeno ${parsed.length} guma u fajlu. Izaberi kako da ih uneseš.`;
       openExcelChoice();
     }catch(err){
+      logError('uvoz Excel/CSV', (err && err.message) || String(err));
       showToast('Greška pri čitanju Excel/CSV fajla');
     }
   };
