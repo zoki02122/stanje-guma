@@ -289,7 +289,20 @@
   .vw-img{flex:1;min-height:0;position:relative;overflow:hidden;touch-action:none;}
   .vw-img img{max-width:100%;max-height:100%;display:block;user-select:none;-webkit-user-drag:none;pointer-events:none;}
   .vw-bot{flex:none;padding:14px 16px calc(22px + env(safe-area-inset-bottom));text-align:center;}
-  .vw-hint{color:#aaa;font-size:12.5px;}
+  .vw-hint{color:#aaa;font-size:12.5px;margin-top:10px;}
+  /* v10 (Zoran 24.11., uzor Gde sam ostavio v10): profilna slika i strelica na slici */
+  .prof-star{position:absolute;left:10px;top:10px;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.6);color:#FFD54A;display:flex;align-items:center;justify-content:center;font-size:17px;line-height:1;pointer-events:none;z-index:2;}
+  .sw-arrow{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;transform-origin:50% 50%;will-change:transform;}
+  .sw-arrow.zm-anim{transition:transform .22s ease;}
+  .vw-btns{display:flex;gap:10px;justify-content:center;}
+  .vw-prof{height:50px;padding:0 16px;border-radius:999px;border:none;background:var(--act-bg);color:var(--on-act);font-weight:700;font-size:15px;font-family:inherit;cursor:pointer;}
+  .vw-prof:disabled{opacity:.45;}
+  .vw-prof.vw-arr{background:#C62828;color:#fff;}
+  .vw-mk-x{height:42px;padding:0 16px;border-radius:999px;border:1px solid #555;background:transparent;color:#fff;font-size:15px;font-family:inherit;cursor:pointer;}
+  .vw-prof.vw-mk-save{height:42px;padding:0 18px;font-size:15px;}
+  .vw-mk-save.dim{opacity:.4;}
+  .vw-prof.vw-mk-rm{background:#2b2b2b;color:#ff6b6b;}
+  .vw-mk-pad{position:absolute;inset:0;z-index:3;touch-action:none;}
   body.vw-open #confirmBackdrop{z-index:49;} body.vw-open #confirmSheet{z-index:50;}
   .dim-one{display:flex;gap:10px;}
   .dim-one input{flex:1;min-width:0;letter-spacing:.3px;}
@@ -1312,11 +1325,14 @@ document.getElementById('saveBtn').addEventListener('click', () => {
     cena: document.getElementById('f_cena').value.trim(),
     napomena: document.getElementById('f_napomena').value.trim(),
   };
+  const strel = strelOf({strelice:formStrel}, formPics.length);   /* v10: strelica po slici */
+  if(strel.some(Boolean)) data.strelice = strel;
   const isNew = !editingId;
   let savedId = editingId;
   if(editingId){
     const idx = items.findIndex(i => i.id === editingId);
     items[idx] = {...items[idx], ...data};
+    if(!data.strelice) delete items[idx].strelice;
   } else {
     savedId = uid();
     items.unshift({id: savedId, ...data});
@@ -1387,9 +1403,9 @@ const Slike = (function(){
 })();
 Slike.ucitaj().then(()=>{ Slike.pocisti(); window.slikePocisti = ()=>Slike.pocisti(); });
 
-let formPics = [], picIdx = 0, tipTouched = false, aiMarks = new Set(), aiRun = 0, aiFormToken = 0;
+let formPics = [], formStrel = [], picIdx = 0, tipTouched = false, aiMarks = new Set(), aiRun = 0, aiFormToken = 0;
 function formOpenPics(id){
-  formPics = id ? (SLIKE.get(id)||[]).slice() : []; picIdx = 0; tipTouched = false; aiFormToken++;
+  formPics = id ? (SLIKE.get(id)||[]).slice() : []; formStrel = strelOf(id ? items.find(i=>i.id===id) : null, formPics.length); picIdx = 0; tipTouched = false; aiFormToken++;
   aiMarks.clear(); document.querySelectorAll('#sheet .field.ai-fill').forEach(f=>f.classList.remove('ai-fill'));
   renderPics(); renderAiBtn();
 }
@@ -1397,12 +1413,12 @@ function renderPics(){
   const box = document.getElementById('picBox'); if(!box) return;
   if(!formPics.length){ box.innerHTML = ''; return; }
   if(picIdx >= formPics.length) picIdx = 0;
-  box.innerHTML = '<div class="pic-big" id="picBig">'+stripHtml(formPics, 'cover')+'<span class="pic-cnt" id="picCnt">'+(picIdx+1)+' / '+formPics.length+'</span></div>';
+  box.innerHTML = '<div class="pic-big" id="picBig">'+stripHtml(formPics, 'cover', formStrel)+'<span class="pic-cnt" id="picCnt">'+(picIdx+1)+' / '+formPics.length+'</span></div>';
   makeStrip(box.querySelector('.sw-strip'), { idx:picIdx, onIdx:(i)=>{ picIdx = i; const c = document.getElementById('picCnt'); if(c) c.textContent = (i+1)+' / '+formPics.length; }, onTap:()=>openViewer(picIdx) });
 }
 function addPics(arr){
   if(!arr || !arr.length) return;
-  const before = formPics.length; formPics = formPics.concat(arr); picIdx = before;
+  const before = formPics.length; formStrel = strelOf({strelice:formStrel}, before).concat(arr.map(()=>null)); formPics = formPics.concat(arr); picIdx = before;
   renderPics(); aiCitaj(arr);
 }
 /* fotografije: cele slike, umanjene na 1600 px po dužoj strani, JPEG 0,85 */
@@ -1497,30 +1513,148 @@ function openViewer(i){
   const el = document.createElement('div'); el.className = 'vw-screen'; el.id = 'vwScreen';
   document.body.appendChild(el); document.body.classList.add('vw-open');
   renderViewer();
-  vwCloseFn = ()=>{ const x = document.getElementById('vwScreen'); if(x) x.remove(); document.body.classList.remove('vw-open'); vwCloseFn = null; };
+  vwCloseFn = ()=>{ const x = document.getElementById('vwScreen'); if(x) x.remove(); document.body.classList.remove('vw-open'); vwCloseFn = null; vwMk = null; vwMkFn = null; };
   pushOverlay(vwCloseFn);
 }
 function renderViewer(){
   const el = document.getElementById('vwScreen'); if(!el || !formPics.length) return;
+  if(vwMk) return renderMark(el);
   el.innerHTML = '<div class="vw-top"><button class="cam-btn" onclick="closeViewer()" aria-label="Nazad">‹</button><b id="vwCnt"></b><button class="cam-btn vw-del" onclick="viewerDelete()" aria-label="Obriši sliku">🗑</button></div>'+
-    '<div class="vw-img">'+stripHtml(formPics, 'contain')+'</div>'+
-    '<div class="vw-bot"><div class="vw-hint">'+(formPics.length>1 ? '‹ prevuci › · ' : '')+'dva prsta: uvećaj · dodir na sliku = nazad</div></div>';
+    '<div class="vw-img">'+stripHtml(formPics, 'contain', formStrel)+'</div>'+
+    '<div class="vw-bot"><div class="vw-btns"><button class="vw-prof" id="vwProf" onclick="viewerSetProfile()"></button>'+
+    '<button class="vw-prof vw-arr" id="vwArr" onclick="markOpen()">📍 Strelica</button></div>'+
+    '<div class="vw-hint">'+(formPics.length>1 ? '‹ prevuci › · ' : '')+'dva prsta: uvećaj · dodir na sliku = nazad</div></div>';
   makeStrip(el.querySelector('.sw-strip'), { idx:vwIdx, zoom:true, onIdx:(i)=>{ vwIdx = i; viewerBar(); }, onTap:closeViewer });
   viewerBar();
 }
-function viewerBar(){ const c = document.getElementById('vwCnt'); if(c) c.textContent = (vwIdx+1)+' / '+formPics.length; }
+function viewerBar(){
+  const prof = vwIdx === 0;
+  const c = document.getElementById('vwCnt'); if(c) c.textContent = (vwIdx+1)+' / '+formPics.length;
+  const b = document.getElementById('vwProf'); if(b){ b.disabled = prof; b.textContent = prof ? '★ Profilna slika' : '★ Postavi kao profilnu'; }
+}
 function closeViewer(){ if(vwCloseFn) closeOverlay(vwCloseFn); }
 function viewerDelete(){
   showConfirm({ title:'Obriši sliku', message:'Obrisati ovu sliku gume? (Konačno tek kad pritisneš Sačuvaj.)', confirmLabel:'Obriši', danger:true, onConfirm:()=>{
     if(!formPics.length) return;
-    formPics.splice(vwIdx, 1); picIdx = Math.min(picIdx, Math.max(0, formPics.length-1)); renderPics();
+    formStrel = strelOf({strelice:formStrel}, formPics.length);
+    formPics.splice(vwIdx, 1); formStrel.splice(vwIdx, 1); picIdx = Math.min(picIdx, Math.max(0, formPics.length-1)); renderPics();
     if(!formPics.length){ closeViewer(); return; }
     vwIdx = Math.min(vwIdx, formPics.length-1); renderViewer();
   }});
 }
-function stripHtml(arr, fit){
-  return '<div class="sw-strip"><div class="sw-track">'+arr.map(u=>'<div class="sw-slide"><img src="'+u+'" draggable="false"'+
-    (fit==='contain'?' style="max-width:100%;max-height:100%;display:block;user-select:none;-webkit-user-drag:none"':'')+'></div>').join('')+'</div></div>';
+/* v10 (Zoran 24.11., uzor Gde sam ostavio): profilna i strelica — postojeća guma: slike i strelice se čuvaju ODMAH (ostala polja tek na Sačuvaj);
+   nova guma: tek na Sačuvaj (bez dimenzije/količine ne može). */
+function picsCommit(msg, msgNew){
+  const it = editingId && items.find(i => i.id === editingId);
+  if(!it){ showToast(msgNew); return; }
+  const st = strelOf({strelice:formStrel}, formPics.length);
+  if(st.some(Boolean)) it.strelice = st; else delete it.strelice;
+  persistItems(); Slike.postavi(editingId, formPics.slice());
+  showToast(msg);
+}
+function viewerSetProfile(){
+  if(!formPics.length || vwIdx === 0) return;
+  formStrel = strelOf({strelice:formStrel}, formPics.length);
+  formPics.unshift(formPics.splice(vwIdx, 1)[0]);
+  formStrel.unshift(formStrel.splice(vwIdx, 1)[0]);   /* strelica ide uz svoju sliku */
+  vwIdx = 0; picIdx = 0;
+  renderViewer(); renderPics();
+  picsCommit('Profilna slika je sačuvana.', 'Profilna slika je izabrana — sačuvaće se kad sačuvaš gumu.');
+}
+/* režim označavanja — Otkaži · Dodirni predmet · Sačuvaj; dodir = vrh strelice, prevlačenje kružića na repu = okret; „nazad“ = Otkaži */
+let vwMk = null, vwMkFn = null;
+function markOpen(){
+  if(!formPics.length || vwMk) return;
+  const cur = (formStrel||[])[vwIdx] || null;
+  vwMk = { idx: vwIdx, s: cur ? Object.assign({}, cur) : null, orig: JSON.stringify(cur) };
+  vwMkFn = ()=>{ vwMk = null; vwMkFn = null; renderViewer(); };
+  pushOverlay(vwMkFn);
+  renderViewer();
+}
+function markCancel(){ if(vwMkFn) closeOverlay(vwMkFn); }
+function markChanged(){ return !!vwMk && JSON.stringify(vwMk.s) !== vwMk.orig; }
+function renderMark(el){
+  const s = vwMk.s;
+  el.innerHTML = '<div class="vw-top"><button class="vw-mk-x" onclick="markCancel()">Otkaži</button><b>Dodirni mesto</b>'+
+    '<button class="vw-prof vw-mk-save'+(markChanged()?'':' dim')+'" id="vwMkSave" onclick="markSave()">Sačuvaj</button></div>'+
+    '<div class="vw-img" id="vwMkImg">'+stripHtml([formPics[vwMk.idx]], 'contain', [s], true)+'<div class="vw-mk-pad" id="vwMkPad"></div></div>'+
+    '<div class="vw-bot"><button class="vw-prof vw-mk-rm" onclick="markRemove()"'+(s ? '' : ' style="visibility:hidden"')+'>Ukloni strelicu</button>'+   /* mesto uvek zauzeto: slika se ne pomera */
+    '<div class="vw-hint">dodir = vrh strelice · prevuci kružić da okreneš</div></div>';
+  markWire(document.getElementById('vwMkPad'));
+}
+function markRedraw(){
+  const sl = document.querySelector('#vwMkImg .sw-slide'); if(!sl) return;
+  const old = sl.querySelector('.sw-arrow'); if(old) old.remove();
+  if(vwMk.s) sl.insertAdjacentHTML('beforeend', arrowSvg(vwMk.s, 'contain', true));
+  const b = document.getElementById('vwMkSave'); if(b) b.classList.toggle('dim', !markChanged());
+}
+/* prikazana slika (contain) unutar polja: px ↔ deo slike */
+function markBox(){
+  const box = document.getElementById('vwMkImg'), im = box && box.querySelector('img'); if(!box || !im) return null;
+  const R = box.getBoundingClientRect(), nw = im.naturalWidth || 3, nh = im.naturalHeight || 4, k = Math.min(R.width/nw, R.height/nh);
+  const w = nw*k, h = nh*k; return { x: R.left + (R.width-w)/2, y: R.top + (R.height-h)/2, w, h, r: nw/nh };
+}
+function markWire(pad){
+  if(!pad) return;
+  let g = null;
+  pad.addEventListener('touchstart', (e)=>{
+    const t = e.touches[0], b = markBox(); if(!t || !b || e.touches.length > 1){ g = null; return; }
+    g = { x: t.clientX, y: t.clientY, m: 'tap' };
+    if(vwMk.s){
+      const tipX = b.x + vwMk.s.x*b.w, tipY = b.y + vwMk.s.y*b.h, a = vwMk.s.a*Math.PI/180;
+      const ex = tipX + Math.cos(a)*b.w/5, ey = tipY + Math.sin(a)*b.w/5;
+      if(Math.hypot(t.clientX-ex, t.clientY-ey) < 38) g = { m: 'rot', tipX, tipY };
+    }
+  }, {passive:true});
+  pad.addEventListener('touchmove', (e)=>{
+    const t = e.touches[0]; if(!g || !t) return;
+    if(g.m === 'rot'){
+      if(Math.hypot(t.clientX-g.tipX, t.clientY-g.tipY) < 8) return;
+      vwMk.s.a = Math.round(Math.atan2(t.clientY-g.tipY, t.clientX-g.tipX)*180/Math.PI); markRedraw();
+    } else if(Math.hypot(t.clientX-g.x, t.clientY-g.y) > 12) g.m = 'none';
+  }, {passive:true});
+  pad.addEventListener('touchend', (e)=>{
+    const gg = g; g = null; if(!gg) return; e.preventDefault();
+    if(gg.m !== 'tap') return;
+    const b = markBox(); if(!b) return;
+    const cl = (v)=>Math.max(0, Math.min(1, v)), x = Math.round(cl((gg.x-b.x)/b.w)*1000)/1000, y = Math.round(cl((gg.y-b.y)/b.h)*1000)/1000;
+    if(vwMk.s){ vwMk.s.x = x; vwMk.s.y = y; markRedraw(); return; }
+    const dx = (0.5-x)*b.w, dy = (0.5-y)*b.h;   /* rep ka sredini slike */
+    const a = Math.hypot(dx, dy) < 4 ? 135 : Math.round(Math.atan2(dy, dx)*180/Math.PI);
+    vwMk.s = { x, y, a, r: Math.round(b.r*1000)/1000 };
+    renderViewer();
+  });
+  pad.addEventListener('touchcancel', ()=>{ g = null; });
+}
+function markRemove(){ if(!vwMk) return; vwMk.s = null; renderViewer(); }
+function markSave(){
+  if(!vwMk || !markChanged()) return;
+  const idx = vwMk.idx, s = vwMk.s;
+  formStrel = strelOf({strelice:formStrel}, formPics.length);
+  formStrel[idx] = s;
+  closeOverlay(vwMkFn);   /* pregled se vraća sa strelicom */
+  renderPics();
+  picsCommit(s ? 'Strelica je sačuvana.' : 'Strelica je uklonjena.', 'Strelica je postavljena — sačuvaće se kad sačuvaš gumu.');
+}
+function arrowGeo(s){
+  const W = 1000, H = Math.round(W/(s.r||0.75)), L = W/5, a = (s.a||0)*Math.PI/180, ux = Math.cos(a), uy = Math.sin(a);
+  const tx = s.x*W, ty = s.y*H; return { W, H, L, tx, ty, ex: tx+ux*L, ey: ty+uy*L, ux, uy };
+}
+function arrowSvg(s, fit, edit){
+  if(!s) return '';
+  const g = arrowGeo(s), hs = g.L*0.38, bx = g.tx+g.ux*hs, by = g.ty+g.uy*hs, nx = -g.uy*hs*0.62, ny = g.ux*hs*0.62, w = g.L*0.085, o = g.L*0.05;
+  const f = (v)=>Math.round(v*10)/10, head = f(g.tx)+','+f(g.ty)+' '+f(bx+nx)+','+f(by+ny)+' '+f(bx-nx)+','+f(by-ny);
+  const line = (c, sw)=>'<line x1="'+f(g.ex)+'" y1="'+f(g.ey)+'" x2="'+f(bx)+'" y2="'+f(by)+'" stroke="'+c+'" stroke-width="'+f(sw)+'"/>';
+  return '<svg class="sw-arrow" viewBox="0 0 '+g.W+' '+g.H+'" preserveAspectRatio="xMidYMid '+(fit==='cover'?'slice':'meet')+'"><g stroke-linecap="round" stroke-linejoin="round">'+
+    line('#fff', w+o*2)+'<polygon points="'+head+'" fill="#fff" stroke="#fff" stroke-width="'+f(o*2)+'"/>'+line('#FF1A1A', w)+'<polygon points="'+head+'" fill="#FF1A1A"/>'+
+    (edit ? '<circle cx="'+f(g.ex)+'" cy="'+f(g.ey)+'" r="'+f(g.L*0.17)+'" fill="rgba(255,255,255,.25)" stroke="#fff" stroke-width="'+f(g.L*0.03)+'" stroke-dasharray="'+f(g.L*0.06)+' '+f(g.L*0.045)+'"/>' : '')+
+    '</g></svg>';
+}
+function strelOf(it, n){ const a = (it && Array.isArray(it.strelice)) ? it.strelice.slice(0, n) : []; while(a.length < n) a.push(null); return a; }
+function stripHtml(arr, fit, strel, edit){
+  return '<div class="sw-strip"><div class="sw-track">'+arr.map((u,i)=>'<div class="sw-slide">'+(i===0 && !edit && arr.length>1 ?'<span class="prof-star" title="Profilna slika">★</span>':'')+
+    '<img src="'+u+'" draggable="false"'+(fit==='contain'?' style="width:100%;height:100%;object-fit:contain;display:block;user-select:none;-webkit-user-drag:none"':'')+'>'+
+    arrowSvg(strel && strel[i], fit, edit)+'</div>').join('')+'</div></div>';
 }
 function makeStrip(box, o){
   if(!box) return null;
@@ -1531,7 +1665,8 @@ function makeStrip(box, o){
   const img = ()=> slides[idx] && slides[idx].querySelector('img');
   const place = (dx, anim)=>{ track.classList.toggle('anim', !!anim); track.style.transform = 'translate3d('+(-idx*W() + (dx||0))+'px,0,0)'; };
   const zApply = (anim)=>{ const im = img(); if(!im) return; im.classList.toggle('zm-anim', !!anim);
-    im.style.transform = (z.s===1 && !z.r && !z.tx && !z.ty) ? '' : 'translate('+z.tx+'px,'+z.ty+'px) rotate('+z.r+'rad) scale('+z.s+')'; };
+    im.style.transform = (z.s===1 && !z.r && !z.tx && !z.ty) ? '' : 'translate('+z.tx+'px,'+z.ty+'px) rotate('+z.r+'rad) scale('+z.s+')';
+    const ar = slides[idx].querySelector('.sw-arrow'); if(ar){ ar.classList.toggle('zm-anim', !!anim); ar.style.transform = im.style.transform; } };
   const zClamp = ()=>{ z.s = Math.max(1, Math.min(5, z.s)); if(z.s===1){ z.tx = 0; z.ty = 0; return; }
     const mx = (z.s-1)*box.clientWidth/2 + 40, my = (z.s-1)*box.clientHeight/2 + 40;
     z.tx = Math.max(-mx, Math.min(mx, z.tx)); z.ty = Math.max(-my, Math.min(my, z.ty)); };
@@ -2289,7 +2424,7 @@ let settingsCloseFn = null;   // nivo 1: ekran sa pločicama
 let settingsSubFn = null;     // nivo 2: otvoren pod-ekran
 const SETTINGS_BACK_SVG = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
 const NUM_ATTR = 'inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"';
-const APP_VERSION = 9;
+const APP_VERSION = 10;
 function daniRec(n){ return (n%10===1 && n%100!==11) ? 'dan' : 'dana'; }
 function settingsTile(icon, title, sub, onclick, extraClass){
   return '<button type="button" class="set-tile'+(extraClass?' '+extraClass:'')+'" onclick="'+onclick+'">'+
