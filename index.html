@@ -1300,12 +1300,14 @@ document.getElementById('saveBtn').addEventListener('click', () => {
   settleFields(document.getElementById('sheet'));
   const dimenzije = dimForSave();
   if(!dimenzije){ showToast('Unesi dimenziju: širinu, profil i prečnik (npr. 2055516)'); return; }
+  const kolEl = document.getElementById('f_kolicina');
+  if(!(parseInt(kolEl.value) >= 1)){ showToast('Unesi količinu'); kolEl.focus(); return; }
   const data = {
     tip: tipSeg.dataset.value || 'M+S',
     proizvodjac: document.getElementById('f_proizvodjac').value.trim(),
     dimenzije: dimenzije,
     sara: document.getElementById('f_sara').value.trim(),
-    kolicina: parseInt(document.getElementById('f_kolicina').value) || 0,
+    kolicina: parseInt(kolEl.value),
     godiste: document.getElementById('f_godiste').value.trim(),
     cena: document.getElementById('f_cena').value.trim(),
     napomena: document.getElementById('f_napomena').value.trim(),
