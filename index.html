@@ -648,13 +648,13 @@ html[data-theme="koza"]{
 
   <div class="field">
     <label>Proizvođač</label>
-    <input type="text" id="f_proizvodjac" placeholder="npr. Continental" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+    <input type="text" id="f_proizvodjac" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
   </div>
 
   <div class="field">
     <label>Dimenzije</label>
     <div class="dim-one">
-      <input type="text" id="f_dim" placeholder="205/55 R16" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      <input type="text" id="f_dim" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
       <button type="button" class="dim-c" id="f_dim_c" aria-pressed="false">C</button>
     </div>
   </div>
@@ -662,28 +662,28 @@ html[data-theme="koza"]{
   <div class="row2">
     <div class="field">
       <label>Šara dubina</label>
-      <input type="text" id="f_sara" inputmode="numeric" placeholder="npr. 4" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      <input type="text" id="f_sara" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
     </div>
     <div class="field">
       <label>Količina</label>
-      <input type="number" id="f_kolicina" min="0" placeholder="1" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      <input type="number" id="f_kolicina" min="0" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
     </div>
   </div>
 
   <div class="row2">
     <div class="field">
       <label>Godište</label>
-      <input type="text" id="f_godiste" inputmode="numeric" placeholder="npr. 2021" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      <input type="text" id="f_godiste" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
     </div>
     <div class="field">
       <label>Cena</label>
-      <input type="text" id="f_cena" inputmode="numeric" placeholder="npr. 2.500" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      <input type="text" id="f_cena" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
     </div>
   </div>
 
   <div class="field">
     <label>Napomena</label>
-    <textarea id="f_napomena" placeholder="npr. ok, jedna oštećena..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+    <textarea id="f_napomena" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
   </div>
 
   <div class="sheet-actions">
@@ -708,7 +708,7 @@ html[data-theme="koza"]{
     </div>
     <div class="field">
       <label>Cena po komadu (din)</label>
-      <input type="text" inputmode="numeric" id="s_cena" placeholder="npr. 3.500" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      <input type="text" inputmode="numeric" id="s_cena" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
     </div>
   </div>
 
@@ -2287,7 +2287,7 @@ let settingsCloseFn = null;   // nivo 1: ekran sa pločicama
 let settingsSubFn = null;     // nivo 2: otvoren pod-ekran
 const SETTINGS_BACK_SVG = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
 const NUM_ATTR = 'inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"';
-const APP_VERSION = 8;
+const APP_VERSION = 9;
 function daniRec(n){ return (n%10===1 && n%100!==11) ? 'dan' : 'dana'; }
 function settingsTile(icon, title, sub, onclick, extraClass){
   return '<button type="button" class="set-tile'+(extraClass?' '+extraClass:'')+'" onclick="'+onclick+'">'+
@@ -2339,7 +2339,7 @@ function openSettingsSub(key){
   } else if(key === 'reminder'){
     title = 'Podsetnik za bekap';
     body = '<div class="field"><label for="backupIntervalInput">Podseti me na svakih (dana)</label>'+
-      '<input type="number" id="backupIntervalInput" min="1" placeholder="7" '+NUM_ATTR+' value="'+getBackupIntervalDays()+'" oninput="saveBackupInterval(this.value)"></div>'+
+      '<input type="number" id="backupIntervalInput" min="1" '+NUM_ATTR+' value="'+getBackupIntervalDays()+'" oninput="saveBackupInterval(this.value)"></div>'+
       '<div class="settings-hint">Kad prođe ovoliko dana od poslednjeg bekapa, gore će se pojaviti podsetnik.</div>';
   } else if(key === 'excel'){
     title = 'Uvoz iz Excel / CSV';
@@ -2348,7 +2348,7 @@ function openSettingsSub(key){
   } else if(key === 'apikey'){
     title = 'Gemini API ključ';
     body = '<div class="field"><label for="sApiKey">Google Gemini API ključ</label>'+
-      '<input id="sApiKey" type="password" enterkeyhint="done" onkeydown="if(event.key===\'Enter\'){ event.preventDefault(); saveApiKeySetting(); }" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="'+escapeHtml(getApiKey())+'" placeholder="AIza..."></div>'+
+      '<input id="sApiKey" type="password" enterkeyhint="done" onkeydown="if(event.key===\'Enter\'){ event.preventDefault(); saveApiKeySetting(); }" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" value="'+escapeHtml(getApiKey())+'"></div>'+
       '<button type="button" class="btn primary wide" onclick="saveApiKeySetting()">Sačuvaj</button>'+
       '<div class="settings-hint">Potreban je da AI pročita gumu sa slike. Ključ se čuva samo na ovom telefonu i ne ide u bekap. Isti ključ kao u Zakazivanju ili Kućnoj apoteci: kopiraj ga odande (Podešavanja) i nalepi ovde.</div>';
   } else if(key === 'wipe'){
