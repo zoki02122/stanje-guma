@@ -2,7 +2,7 @@
 <html lang="sr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, interactive-widget=resizes-content">
 <title>Stanje guma</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#17181b" id="metaThemeColor">
@@ -200,6 +200,20 @@
   .to-top{position:fixed;left:50%;bottom:calc(27px + env(safe-area-inset-bottom));z-index:21;width:48px;height:48px;margin:0 0 0 -24px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);background:color-mix(in srgb, var(--surface) 94%, transparent);color:var(--text);box-shadow:0 6px 18px -6px rgba(0,0,0,.55);opacity:0;transform:translateY(12px) scale(.9);pointer-events:none;transition:opacity .2s ease,transform .2s ease;cursor:pointer;-webkit-tap-highlight-color:transparent;}
   .to-top.show{opacity:1;transform:none;pointer-events:auto;}
   .to-top:active{background:var(--surface-2);}
+  /* v17: ↶ ↷ (uzor Zakazivanje) — tokom izmene: široki ↶ ↷ + mali kvadrati Otkaži/Sačuvaj; pretraga: ↶ ↷ umesto × */
+  .ur-b{display:none;}
+  .urmode .ur-b{display:flex;flex:1;min-width:0;height:54px;border-radius:14px;font-size:32px;font-weight:700;line-height:1;align-items:center;justify-content:center;font-family:inherit;cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent;transition:background .15s,opacity .15s;}
+  .urmode .ur-b:not(.dim){background:var(--act-bg);border:1.5px solid var(--act-line);color:var(--on-act);box-shadow:var(--act-shine);}
+  .urmode .ur-b.dim{background:transparent;border:1.5px dashed var(--line);color:var(--muted);opacity:.5;box-shadow:none;}
+  .btn .bi,.btn .bl-s{display:none;}
+  .ur-foot.urmode{align-items:flex-start;gap:8px;}
+  .ur-foot.urmode .btn.ur-sq{flex:none;width:62px;padding:0;background:none !important;border:none !important;box-shadow:none !important;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11.5px;font-weight:500;color:var(--muted) !important;text-shadow:none !important;}
+  .ur-foot.urmode .btn.ur-sq .bi{display:flex;width:54px;height:54px;border-radius:14px;align-items:center;justify-content:center;font-size:22px;border:1px solid var(--line);background:var(--surface-2);color:var(--text);}
+  .ur-foot.urmode .btn.primary.ur-sq .bi{background:var(--act-bg);border-color:var(--act-line);color:var(--on-act);box-shadow:var(--act-shine);}
+  .ur-foot.urmode .bl-l{display:none;} .ur-foot.urmode .bl-s{display:inline;}
+  #sheet .sheet-actions.ur-foot{position:sticky;bottom:calc(-18px - env(safe-area-inset-bottom));z-index:3;background:var(--surface);margin:18px -18px 0;padding:10px 18px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);}
+  .search-dim.urmode #clearSearchBtn{display:none;}
+  .search-dim.urmode .ur-b.ur-sm{flex:none;width:44px;height:38px;border-radius:10px;font-size:22px;}
   .fab{position:fixed;right:18px;bottom:22px;width:58px;height:58px;border-radius:50%;background:var(--act-bg);color:var(--on-act);border:1px solid var(--act-line);font-size:30px;box-shadow:0 6px 18px rgba(0,0,0,.4), var(--act-shine);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:20;}
   .fab:active{transform:scale(0.94);}
 
@@ -657,6 +671,7 @@ html[data-theme="koza"]{
           <span class="dim-sep">/</span>
           <input type="number" id="sq_r" placeholder="" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
         </div>
+        <button type="button" class="ur-b ur-sm ur-undo dim" onclick="urGo('q',-1)" aria-label="Poništi">↶</button><button type="button" class="ur-b ur-sm ur-redo dim" onclick="urGo('q',1)" aria-label="Ponovi">↷</button>
         <button class="clear-search-btn" id="clearSearchBtn" title="Poništi pretragu" aria-label="Poništi pretragu"><span class="ic-emoji">&times;</span><svg class="ic-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>
       <div class="search" id="mfgSearchRow" style="display:none;">
@@ -765,12 +780,13 @@ html[data-theme="koza"]{
     <textarea id="f_napomena" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
   </div>
 
-  <div class="sheet-actions">
-    <button class="btn ghost" id="cancelBtn">Otkaži</button>
-    <button class="btn primary" id="saveBtn">Sačuvaj</button>
-  </div>
   <div class="sheet-actions" id="deleteRow" style="display:none;">
     <button class="btn danger" id="deleteBtn">Obriši gumu</button>
+  </div>
+  <div class="sheet-actions ur-foot">
+    <button type="button" onclick="urGo('g',-1)" class="ur-b ur-undo dim" aria-label="Poništi">↶</button><button type="button" onclick="urGo('g',1)" class="ur-b ur-redo dim" aria-label="Ponovi">↷</button>
+    <button class="btn ghost ur-sq" id="cancelBtn"><span class="bi">✕</span><span class="bl">Otkaži</span></button>
+    <button class="btn primary ur-sq" id="saveBtn"><span class="bi">✓</span><span class="bl">Sačuvaj</span></button>
   </div>
 </div>
 
@@ -801,9 +817,10 @@ html[data-theme="koza"]{
     <div class="l">ukupan iznos</div>
   </div>
 
-  <div class="sheet-actions">
-    <button class="btn ghost" id="saleCancelBtn">Otkaži</button>
-    <button class="btn primary" id="saleConfirmBtn">Potvrdi prodaju</button>
+  <div class="sheet-actions ur-foot">
+    <button type="button" class="ur-b ur-undo dim" onclick="urGo('s',-1)" aria-label="Poništi">↶</button><button type="button" class="ur-b ur-redo dim" onclick="urGo('s',1)" aria-label="Ponovi">↷</button>
+    <button class="btn ghost ur-sq" id="saleCancelBtn"><span class="bi">✕</span><span class="bl">Otkaži</span></button>
+    <button class="btn primary ur-sq" id="saleConfirmBtn"><span class="bi">✓</span><span class="bl"><span class="bl-l">Potvrdi prodaju</span><span class="bl-s">Prodaj</span></span></button>
   </div>
 </div>
 
@@ -1538,6 +1555,80 @@ function wireBackspace(el, prev){
 /* vrednost polja za čitanje: osenčeno (netaknuto) polje = stari tekst */
 function fieldVal(el){ return (pristineArmed.has(el) && el.value === '') ? (fieldOriginal.get(el) || '') : el.value; }
 function settleFields(root){ root.querySelectorAll('input,textarea').forEach(el => disarmField(el, true)); }
+/* v17 (Zoran 24.11., uzor Zakazivanje v36/v59–v64): ↶ ↷ — prozor gume ('g'), prodaja ('s'), pretraga dimenzije ('q').
+   Korak = pauza u kucanju 0,8 s ili jedna radnja (tip, C, slika, strelica, AI upis). ↶ ↷ vraćaju ceo prozor.
+   Red se menja dok traje izmena (fokus u polju ili nova promena), a vraća se kad izađeš iz polja. Dodir na ↶ ↷ ne skida fokus.
+   Gboard pravilo: dok tastatura radi, kod ne menja value — zato blur → upis → isto/promenjeno polje ponovo dobija fokus bez senke. */
+const G_IDS = ['f_proizvodjac','f_dim','f_sara','f_kolicina','f_godiste','f_cena','f_napomena'];
+const S_IDS = ['s_kolicina','s_cena','s_datum'];
+const Q_IDS = ['sq_w','sq_p','sq_r'];
+const $v = (id)=>{ const el = document.getElementById(id); return el ? String(fieldVal(el)) : ''; };
+const UR = {
+  g: { root:'#sheet', foot:'#sheet .sheet-actions.ur-foot', ids:G_IDS,
+       snap:()=>({ f:G_IDS.map($v), tip:tipSeg.dataset.value||'', c:dimCBtn.classList.contains('on'), pics:formPics.slice(), strel:JSON.stringify(strelOf({strelice:formStrel}, formPics.length)) }),
+       key:(o)=>JSON.stringify([o.f, o.tip, o.c, o.pics.map(p=>p.length+p.slice(-16)).join(','), o.strel]),
+       apply:(o)=>{ G_IDS.forEach((id,i)=>{ document.getElementById(id).value = o.f[i]; }); setTip(o.tip); tipTouched = true; setDimC(o.c);
+         formPics = o.pics.slice(); formStrel = JSON.parse(o.strel); if(picIdx >= formPics.length) picIdx = 0; renderPics(); } },
+  s: { root:'#saleSheet', foot:'#saleSheet .sheet-actions.ur-foot', ids:S_IDS,
+       snap:()=>({ f:S_IDS.map($v) }), key:(o)=>JSON.stringify(o.f),
+       apply:(o)=>{ S_IDS.forEach((id,i)=>{ document.getElementById(id).value = o.f[i]; }); updateSaleTotal(); } },
+  q: { root:'#stanjeControls .search-dim', foot:'#stanjeControls .search-dim', ids:Q_IDS,
+       snap:()=>({ f:Q_IDS.map($v) }), key:(o)=>JSON.stringify(o.f),
+       apply:(o)=>{ Q_IDS.forEach((id,i)=>{ document.getElementById(id).value = o.f[i]; }); dimQueryW = o.f[0]; dimQueryP = o.f[1]; dimQueryR = o.f[2]; renderStanje(); } }
+};
+Object.values(UR).forEach(u=>{ u.h = null; u.t = null; u.edit = false; u.sig = ''; u.busy = false; });
+function urReset(k){ const u = UR[k]; clearTimeout(u.t); u.t = null; u.h = { s:[u.snap()], i:0 }; u.edit = false; u.sig = ''; urBar(k); }
+function urSched(k, ms){ const u = UR[k]; if(!u.h || u.busy) return; clearTimeout(u.t); u.t = setTimeout(()=>urPush(k), ms == null ? 800 : ms); urBar(k); }
+function urPush(k){
+  const u = UR[k]; clearTimeout(u.t); u.t = null; if(!u.h) return;
+  const o = u.snap();
+  if(u.key(u.h.s[u.h.i]) !== u.key(o)){ u.h.s = u.h.s.slice(0, u.h.i+1); u.h.s.push(o); u.h.i = u.h.s.length-1; if(u.h.s.length > 100){ u.h.s.shift(); u.h.i--; } }
+  urBar(k);
+}
+const urTxt = (el)=> el && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && !/^(button|checkbox|radio|file|date)$/.test(el.type)));
+function urRefocus(el){
+  if(!el) return;
+  try{ el.focus({ preventScroll:true }); }catch(e){ el.focus(); }
+  disarmField(el, true);   /* gboard modul pri fokusu osenči — vraćeni tekst ostaje vidljiv */
+  try{ const n = el.value.length; el.setSelectionRange(n, n); }catch(e){}
+  try{ el.scrollIntoView({ block:'nearest' }); }catch(e){}
+}
+function urGo(k, d){
+  const u = UR[k]; urPush(k); if(!u.h) return;
+  const j = u.h.i + d; if(j < 0 || j >= u.h.s.length) return;
+  const root = document.querySelector(u.root), a = document.activeElement;
+  const keep = (a && root && root.contains(a) && urTxt(a)) ? a : null;
+  const pre = u.ids.map($v);
+  if(keep) keep.blur();
+  u.h.i = j; u.busy = true; try{ u.apply(u.h.s[j]); } finally { u.busy = false; }
+  u.edit = true; urBar(k);
+  if(!keep) return;
+  /* kursor prelazi u prvo promenjeno tekstualno polje (vidi se šta je vraćeno), inače ostaje gde je bio */
+  const post = u.ids.map($v); let ch = null;
+  for(let i = 0; i < u.ids.length; i++){ if(pre[i] !== post[i]){ const el = document.getElementById(u.ids[i]); if(urTxt(el)){ ch = el; break; } } }
+  urRefocus(ch || keep);
+}
+function urBar(k){
+  const u = UR[k], foot = document.querySelector(u.foot); if(!foot) return;
+  const p = !!u.t, h = u.h;
+  foot.querySelectorAll('.ur-undo').forEach(b=>b.classList.toggle('dim', !h || (h.i <= 0 && !p)));
+  foot.querySelectorAll('.ur-redo').forEach(b=>b.classList.toggle('dim', !h || p || h.i >= h.s.length-1));
+  const avail = !!h && (p || h.i > 0 || h.i < h.s.length-1), sig = h ? h.i+'/'+h.s.length+(p?'p':'') : '';
+  if(sig !== u.sig){ if(u.sig && sig && avail) u.edit = true; u.sig = sig; }
+  foot.classList.toggle('urmode', u.edit && avail);
+}
+function urKeyOf(el){ if(!el || !el.closest) return ''; for(const k in UR){ if(el.closest(UR[k].root)) return k; } return ''; }
+document.addEventListener('focusin', (e)=>{ const k = urKeyOf(e.target); if(k && urTxt(e.target)){ if(UR[k].t && !UR[k].busy) urPush(k); UR[k].edit = true; urBar(k); } });   /* prelaz u drugo polje = kraj koraka */
+document.addEventListener('focusout', (e)=>{ const k = urKeyOf(e.target); if(!k || !urTxt(e.target)) return;
+  const el = e.target;
+  setTimeout(()=>{ if(!el.isConnected || UR[k].busy) return; const a = document.activeElement; if(!(urTxt(a) && urKeyOf(a) === k)){ UR[k].edit = false; urBar(k); } }, 60); });
+document.addEventListener('input', (e)=>{ const k = urKeyOf(e.target); if(k) urSched(k); }, true);
+document.addEventListener('change', (e)=>{ const k = urKeyOf(e.target); if(k && e.target.type === 'date') urSched(k, 30); }, true);
+['tipSeg','f_dim_c'].forEach(id=>{ const b = document.getElementById(id); if(b) b.addEventListener('click', ()=>urSched('g', 30)); });
+/* dugmad ↶ ↷: pointerdown bez podrazumevane radnje = polje zadržava fokus i tastaturu */
+document.addEventListener('pointerdown', (e)=>{ if(e.target.closest && e.target.closest('.ur-b')) e.preventDefault(); }, true);
+document.addEventListener('mousedown', (e)=>{ if(e.target.closest && e.target.closest('.ur-b')) e.preventDefault(); }, true);
+urReset('q');
 
 // extend backward navigation across the whole add/edit form
 const fProizvodjacEl = document.getElementById('f_proizvodjac');
@@ -1577,6 +1668,7 @@ function openAdd(){
   formOpenPics(null);
   snapshotAllFields();
   openSheet();
+  urReset('g');
 }
 
 function snapshotAllFields(){
@@ -1601,6 +1693,7 @@ function openEdit(id){
   formOpenPics(id);
   snapshotAllFields();
   openSheet();
+  urReset('g');
 }
 
 document.getElementById('addBtn').addEventListener('click', openAdd);
@@ -1710,7 +1803,7 @@ function renderPics(){
 function addPics(arr){
   if(!arr || !arr.length) return;
   const before = formPics.length; formStrel = strelOf({strelice:formStrel}, before).concat(arr.map(()=>null)); formPics = formPics.concat(arr); picIdx = before;
-  renderPics(); aiCitaj(arr);
+  renderPics(); urSched('g', 30); aiCitaj(arr);
 }
 /* fotografije: cele slike, umanjene na 1600 px po dužoj strani, JPEG 0,85 */
 const PIC_MAX = 1600, PIC_Q = 0.85;
@@ -1829,7 +1922,7 @@ function viewerDelete(){
   showConfirm({ title:'Obriši sliku', message:'Obrisati ovu sliku gume? (Konačno tek kad pritisneš Sačuvaj.)', confirmLabel:'Obriši', danger:true, onConfirm:()=>{
     if(!formPics.length) return;
     formStrel = strelOf({strelice:formStrel}, formPics.length);
-    formPics.splice(vwIdx, 1); formStrel.splice(vwIdx, 1); picIdx = Math.min(picIdx, Math.max(0, formPics.length-1)); renderPics();
+    formPics.splice(vwIdx, 1); formStrel.splice(vwIdx, 1); urSched('g', 30); picIdx = Math.min(picIdx, Math.max(0, formPics.length-1)); renderPics();
     if(!formPics.length){ closeViewer(); return; }
     vwIdx = Math.min(vwIdx, formPics.length-1); renderViewer();
   }});
@@ -1850,7 +1943,7 @@ function viewerSetProfile(){
   formPics.unshift(formPics.splice(vwIdx, 1)[0]);
   formStrel.unshift(formStrel.splice(vwIdx, 1)[0]);   /* strelica ide uz svoju sliku */
   vwIdx = 0; picIdx = 0;
-  renderViewer(); renderPics();
+  renderViewer(); renderPics(); urSched('g', 30);
   picsCommit('Profilna slika je sačuvana.', 'Profilna slika je izabrana — sačuvaće se kad sačuvaš gumu.');
 }
 /* režim označavanja — Otkaži · Dodirni predmet · Sačuvaj; dodir = vrh strelice, prevlačenje kružića na repu = okret; „nazad“ = Otkaži */
@@ -1925,7 +2018,7 @@ function markSave(){
   formStrel = strelOf({strelice:formStrel}, formPics.length);
   formStrel[idx] = s;
   closeOverlay(vwMkFn);   /* pregled se vraća sa strelicom */
-  renderPics();
+  renderPics(); urSched('g', 30);
   picsCommit(s ? 'Strelica je sačuvana.' : 'Strelica je uklonjena.', 'Strelica je postavljena — sačuvaće se kad sačuvaš gumu.');
 }
 function arrowGeo(s){
@@ -2095,7 +2188,7 @@ dimCBtn.addEventListener('click', ()=>aiUnmark('dim'));
 function aiPutText(k, v){
   const el = aiField(k); if(!el || !v) return false;
   if(String(fieldVal(el)||'').trim() || document.activeElement === el) return false;
-  el.value = v; aiMark(k); return true;
+  el.value = v; aiMark(k); urSched('g', 30); return true;
 }
 async function aiCitaj(arr){
   if(!aiOn() || !arr || !arr.length) return;
@@ -2363,6 +2456,7 @@ function openSale(id){
   snapshotField(sCenaInput);
   updateSaleTotal();
   openSaleModal();
+  urReset('s');
 }
 
 function updateSaleTotal(){
@@ -2727,6 +2821,7 @@ confirmBackdrop.addEventListener('click', () => {
 
 // ---------- HEADER TOGGLE ----------
 function resetStanjeSearch(){
+  if(typeof urReset === 'function' && UR.q.h) setTimeout(()=>urReset('q'), 0);
   ['sq_w','sq_p','sq_r','searchInput'].forEach(id => disarmField(document.getElementById(id), false));
   dimQueryW = ''; dimQueryP = ''; dimQueryR = '';
   document.getElementById('sq_w').value = '';
@@ -2858,7 +2953,7 @@ let settingsCloseFn = null;   // nivo 1: ekran sa pločicama
 let settingsSubFn = null;     // nivo 2: otvoren pod-ekran
 const SETTINGS_BACK_SVG = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
 const NUM_ATTR = 'inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"';
-const APP_VERSION = 16;
+const APP_VERSION = 17;
 function daniRec(n){ return (n%10===1 && n%100!==11) ? 'dan' : 'dana'; }
 function settingsTile(icon, title, sub, onclick, extraClass){
   return '<button type="button" class="set-tile'+(extraClass?' '+extraClass:'')+'" onclick="'+onclick+'">'+
