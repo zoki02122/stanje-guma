@@ -332,6 +332,11 @@
   .vw-prof.vw-mk-rm{background:#2b2b2b;color:#ff6b6b;}
   .vw-mk-pad{position:absolute;inset:0;z-index:3;touch-action:none;}
   body.vw-open #confirmBackdrop{z-index:49;} body.vw-open #confirmSheet{z-index:50;}
+  /* v12 (Zoran 24.11., pravilo za sve aplikacije, uzor Zakazivanje v49): potvrda iskače GORE, odmah ispod vidljivog zaglavlja (--pop-top) */
+  #confirmBackdrop{z-index:40;}
+  #confirmSheet{top:var(--pop-top,80px);bottom:auto;left:12px;right:12px;max-width:616px;border-radius:22px;border:1px solid var(--line);z-index:41;
+    transform:translateY(-12px);opacity:0;visibility:hidden;transition:transform .18s ease,opacity .18s ease,visibility 0s linear .18s;max-height:calc(100% - var(--pop-top,80px) - 16px);padding-bottom:20px;}
+  #confirmSheet.open{transform:none;opacity:1;visibility:visible;transition:transform .18s ease,opacity .18s ease;}
   .dim-one{display:flex;gap:10px;}
   .dim-one input{flex:1;min-width:0;letter-spacing:.3px;}
   .dim-c{flex:0 0 60px;border-radius:9px;border:1px solid var(--line);background:var(--surface-2);color:var(--muted);font:inherit;font-size:17px;font-weight:700;cursor:pointer;}
@@ -1070,7 +1075,9 @@ function swipeToDelete(tile, id){
     if(!track) return;
     const mx = e.clientX - x0, my = e.clientY - y0;
     if(!on){
-      if(Math.abs(mx) < 10 || Math.abs(mx) < Math.abs(my) * 1.5) return;
+      /* v12 (Zoran 24.11.: „previše osetljivo“): pravac se određuje jednom — pomeranje pretežno gore-dole = skrolovanje, u tom potezu nema brisanja */
+      if(Math.abs(my) >= 8 && Math.abs(my) * 1.2 >= Math.abs(mx)){ track = false; return; }
+      if(Math.abs(mx) < 18 || Math.abs(mx) < Math.abs(my) * 2.5) return;
       on = true;
       if(_swOpen && _swOpen.tile !== tile) swClose();
       if(!_swOpen) _swOpen = {tile, del: mkDel()};
@@ -2512,7 +2519,15 @@ const confirmSheet = document.getElementById('confirmSheet');
 const confirmBackdrop = document.getElementById('confirmBackdrop');
 let confirmCallback = null;
 
+/* --pop-top: donja ivica zaglavlja koje se vidi (pregled slike / Podešavanja / glavno), + 10 px */
+function updatePopTop(){
+  const sel = document.getElementById('vwScreen') ? '#vwScreen .vw-top' : document.getElementById('settingsScreen') ? '#settingsScreen .set-header' : 'body > #app header, header';
+  const h = document.querySelector(sel); let b = h ? h.getBoundingClientRect().bottom : 0;
+  const nt = document.getElementById('noteTop'); if(document.body.classList.contains('noting') && nt) b = Math.max(b, nt.getBoundingClientRect().bottom);
+  document.documentElement.style.setProperty('--pop-top', Math.round(Math.max(b, 16) + 10) + 'px');
+}
 function openConfirmModal(){
+  updatePopTop();
   confirmBackdrop.classList.add('open');
   requestAnimationFrame(()=> confirmSheet.classList.add('open'));
   pushOverlay(closeConfirmModal);
@@ -2676,7 +2691,7 @@ let settingsCloseFn = null;   // nivo 1: ekran sa pločicama
 let settingsSubFn = null;     // nivo 2: otvoren pod-ekran
 const SETTINGS_BACK_SVG = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
 const NUM_ATTR = 'inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"';
-const APP_VERSION = 11;
+const APP_VERSION = 12;
 function daniRec(n){ return (n%10===1 && n%100!==11) ? 'dan' : 'dana'; }
 function settingsTile(icon, title, sub, onclick, extraClass){
   return '<button type="button" class="set-tile'+(extraClass?' '+extraClass:'')+'" onclick="'+onclick+'">'+
