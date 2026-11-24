@@ -165,6 +165,25 @@
   .card-meta span b{color:var(--text);font-weight:500;}
   .note{margin-top:8px;font-size:13px;color:var(--muted);font-style:italic;}
 
+  /* v15 (Zoran 24.11.): Prodaja — izbor meseca/godine (‹ naziv ▾ ›), mreža perioda, prevlačenje spiska = prethodni/sledeći */
+  .per-row{display:flex;align-items:center;gap:8px;margin:2px 0 12px;}
+  .per-btn{flex:none;width:46px;height:46px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--text);font-size:24px;font-family:inherit;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .per-btn:disabled{opacity:.35;cursor:default;}
+  .per-name{flex:1;min-width:0;height:46px;border-radius:12px;border:1px solid var(--act-line);background:var(--surface-2);color:var(--hi-text);font-family:inherit;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;}
+  .per-name small{font-size:13px;color:var(--muted);font-weight:500;}
+  #panel-prodaja{touch-action:pan-y;min-height:70vh;}   /* prevlačenje radi i ispod kratkog spiska */
+  #salesList.per-anim{transition:transform .22s ease, opacity .22s ease;}
+  .pk-bd{position:fixed;inset:0;background:var(--backdrop);z-index:40;}
+  .pk{position:fixed;left:12px;right:12px;top:var(--pop-top,80px);max-width:616px;margin:0 auto;z-index:41;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:18px 16px 16px;max-height:calc(100% - var(--pop-top,80px) - 16px);overflow-y:auto;box-sizing:border-box;}
+  .pk h2{margin:0 40px 6px 0;font-size:22px;}
+  .pk .sheet-close{position:absolute;top:12px;right:12px;}
+  .pk-y{font-size:13px;font-weight:700;color:var(--muted);margin:12px 2px 6px;letter-spacing:.04em;}
+  .pk-g{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .pk-m{padding:10px 6px;border-radius:12px;border:1px solid var(--line);background:var(--surface-2);text-align:center;color:var(--text);font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;}
+  .pk-m small{display:block;font-size:11.5px;color:var(--muted);font-weight:500;margin-top:2px;}
+  .pk-m.on{border-color:var(--accent);background:var(--act-bg);color:var(--on-act);}
+  .pk-m.on small{color:inherit;opacity:.85;}
+  .pk-m:disabled{opacity:.35;cursor:default;}
   .sale-row{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:6px;cursor:pointer;}
   .sale-row:active{border-color:var(--focus-line);}
   .sale-row .sr-top{display:flex;justify-content:space-between;align-items:baseline;}
@@ -656,6 +675,11 @@ html[data-theme="koza"]{
         <div class="chip" data-sf="danas">Danas</div>
         <div class="chip" data-sf="mesec">Mesec</div>
         <div class="chip" data-sf="godina">Godina</div>
+      </div>
+      <div class="per-row" id="perRow" style="display:none;">
+        <button type="button" class="per-btn" id="perPrev" aria-label="Prethodni">‹</button>
+        <button type="button" class="per-name" id="perName"></button>
+        <button type="button" class="per-btn" id="perNext" aria-label="Sledeći">›</button>
       </div>
       <div class="summary-bar">
         <div>
@@ -2406,23 +2430,126 @@ function restoreToStock(r){
   persistItems();
 }
 
+/* v15 (Zoran 24.11.): izabrani period za Mesec / Godinu; strelice ‹ ›, izbor dodirom na naziv, prevlačenje spiska.
+   Ne ide dalje od tekućeg meseca/godine ni pre najstarije prodaje (bez kruga — Zoranova odluka). */
+const MESECI = ['Januar','Februar','Mart','April','Maj','Jun','Jul','Avgust','Septembar','Oktobar','Novembar','Decembar'];
+const _now0 = new Date();
+let perM = { y:_now0.getFullYear(), m:_now0.getMonth() }, perY = _now0.getFullYear();
+function perKey(y, m){ return y*12 + m; }
+function perNowKey(){ const n = new Date(); return activeSaleFilter === 'godina' ? n.getFullYear() : perKey(n.getFullYear(), n.getMonth()); }
+function perCurKey(){ return activeSaleFilter === 'godina' ? perY : perKey(perM.y, perM.m); }
+function perMinKey(){
+  let min = null;
+  sales.forEach(r=>{ const d = new Date(r.datum+'T00:00:00'); if(isNaN(d)) return; const k = activeSaleFilter === 'godina' ? d.getFullYear() : perKey(d.getFullYear(), d.getMonth()); if(min === null || k < min) min = k; });
+  return min === null ? perNowKey() : Math.min(min, perNowKey());
+}
+function perCan(dir){ const k = perCurKey() + dir; return k <= perNowKey() && k >= perMinKey(); }
+function perSetKey(k){ if(activeSaleFilter === 'godina') perY = k; else perM = { y:Math.floor(k/12), m:k%12 }; }
+function perLabel(){ return activeSaleFilter === 'godina' ? String(perY) : MESECI[perM.m]+' '+perM.y; }
 function inSaleFilter(r){
   if(activeSaleFilter === 'sve') return true;
-  const now = new Date();
   const d = new Date(r.datum+'T00:00:00');
-  if(activeSaleFilter === 'danas'){
-    return d.toDateString() === now.toDateString();
-  }
-  if(activeSaleFilter === 'mesec'){
-    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-  }
-  if(activeSaleFilter === 'godina'){
-    return d.getFullYear() === now.getFullYear();
-  }
+  if(activeSaleFilter === 'danas') return d.toDateString() === new Date().toDateString();
+  if(activeSaleFilter === 'mesec') return d.getFullYear() === perM.y && d.getMonth() === perM.m;
+  if(activeSaleFilter === 'godina') return d.getFullYear() === perY;
   return true;
 }
-
+function renderPerRow(){
+  const row = document.getElementById('perRow'); if(!row) return;
+  const on = activeSaleFilter === 'mesec' || activeSaleFilter === 'godina';
+  row.style.display = on ? '' : 'none'; if(!on) return;
+  document.getElementById('perName').innerHTML = escapeHtml(perLabel())+' <small>▾</small>';
+  document.getElementById('perPrev').disabled = !perCan(-1);
+  document.getElementById('perNext').disabled = !perCan(1);
+}
+/* prelaz: stari spisak izlazi na jednu stranu, novi ulazi sa druge (kao smena slika) */
+function perGo(dir, fromDx){
+  if(!perCan(dir)) return false;
+  const list = document.getElementById('salesList'), W = list.clientWidth || 360;
+  list.classList.add('per-anim'); list.style.transform = 'translateX('+(-dir*W)+'px)'; list.style.opacity = '0';
+  setTimeout(()=>{
+    perSetKey(perCurKey() + dir); renderProdaja();
+    list.classList.remove('per-anim'); list.style.transform = 'translateX('+(dir*W)+'px)'; list.style.opacity = '0';
+    void list.offsetWidth;
+    list.classList.add('per-anim'); list.style.transform = ''; list.style.opacity = '';
+    setTimeout(()=>list.classList.remove('per-anim'), 240);
+  }, 200);
+  return true;
+}
+document.getElementById('perPrev').addEventListener('click', ()=>perGo(-1));
+document.getElementById('perNext').addEventListener('click', ()=>perGo(1));
+(function(){
+  const list = document.getElementById('salesList'), area = document.getElementById('panel-prodaja');
+  let g = null;
+  area.addEventListener('touchstart', (e)=>{
+    if(e.touches.length !== 1 || (activeSaleFilter !== 'mesec' && activeSaleFilter !== 'godina') || list.classList.contains('per-anim')){ g = null; return; }
+    const t = e.touches[0]; g = { x:t.clientX, y:t.clientY, lock:null, t0:Date.now() };
+  }, {passive:true});
+  area.addEventListener('touchmove', (e)=>{
+    if(!g) return; const t = e.touches[0], dx = t.clientX - g.x, dy = t.clientY - g.y;
+    if(!g.lock){
+      if(Math.abs(dy) >= 8 && Math.abs(dy) * 1.2 >= Math.abs(dx)){ g.lock = 'y'; return; }   /* skrol */
+      if(Math.abs(dx) >= 14 && Math.abs(dx) > Math.abs(dy) * 2) g.lock = 'x'; else return;
+    }
+    if(g.lock !== 'x') return;
+    const can = perCan(dx < 0 ? 1 : -1);
+    list.style.transform = 'translateX('+(can ? dx : dx*0.25)+'px)';
+  }, {passive:true});
+  const end = (e)=>{
+    const gg = g; g = null; if(!gg || gg.lock !== 'x') return;
+    const t = e.changedTouches && e.changedTouches[0], dx = t ? t.clientX - gg.x : 0;
+    list.dataset.noClick = '1'; setTimeout(()=>{ list.dataset.noClick = ''; }, 400);
+    const fast = Math.abs(dx) > 30 && Date.now() - gg.t0 < 260;
+    if((Math.abs(dx) > list.clientWidth * 0.22 || fast) && perGo(dx < 0 ? 1 : -1)) return;
+    list.classList.add('per-anim'); list.style.transform = ''; setTimeout(()=>list.classList.remove('per-anim'), 240);
+  };
+  area.addEventListener('touchend', end); area.addEventListener('touchcancel', end);
+  list.addEventListener('click', (e)=>{ if(list.dataset.noClick === '1'){ e.stopPropagation(); e.preventDefault(); } }, true);
+})();
+/* izbor perioda: prozor gore sa mesecima (po godinama) ili godinama, uz iznos prodaje */
+let pkCloseFn = null;
+function perSums(){
+  const m = {}, y = {};
+  sales.forEach(r=>{ const d = new Date(r.datum+'T00:00:00'); if(isNaN(d)) return; const km = perKey(d.getFullYear(), d.getMonth());
+    m[km] = (m[km]||0) + (r.ukupno||0); y[d.getFullYear()] = (y[d.getFullYear()]||0) + (r.ukupno||0); });
+  return { m, y };
+}
+function openPerPicker(){
+  if(pkCloseFn) return;
+  updatePopTop();
+  const S = perSums(), n = new Date(), ny = n.getFullYear(), nk = perKey(ny, n.getMonth());
+  const ys = Object.keys(S.y).map(Number); const minY = Math.min(ny, ...(ys.length ? ys : [ny]));
+  const money = (v)=> v ? fmt(v)+' din' : '—';
+  let body = '';
+  if(activeSaleFilter === 'godina'){
+    body = '<div class="pk-g">';
+    for(let y = ny; y >= minY; y--) body += '<button type="button" class="pk-m'+(y===perY?' on':'')+'" data-k="'+y+'"'+(S.y[y]||y===ny?'':' disabled')+'>'+y+'<small>'+money(S.y[y])+'</small></button>';
+    body += '</div>';
+  } else {
+    for(let y = ny; y >= minY; y--){
+      body += '<div class="pk-y">'+y+' · '+money(S.y[y])+'</div><div class="pk-g">';
+      for(let m = 11; m >= 0; m--){
+        const k = perKey(y, m), fut = k > nk, v = S.m[k];
+        body += '<button type="button" class="pk-m'+(k===perCurKey()?' on':'')+'" data-k="'+k+'"'+((fut || (!v && k!==nk))?' disabled':'')+'>'+MESECI[m].slice(0,3)+'.<small>'+(fut?'':money(v))+'</small></button>';
+      }
+      body += '</div>';
+    }
+  }
+  const bd = document.createElement('div'); bd.className = 'pk-bd'; bd.id = 'pkBd';
+  const el = document.createElement('div'); el.className = 'pk'; el.id = 'pkBox';
+  el.innerHTML = '<button type="button" class="sheet-close" aria-label="Zatvori">×</button><h2>'+(activeSaleFilter === 'godina' ? 'Izaberi godinu' : 'Izaberi mesec')+'</h2>'+body;
+  document.body.appendChild(bd); document.body.appendChild(el);
+  pkCloseFn = ()=>{ bd.remove(); el.remove(); pkCloseFn = null; };
+  pushOverlay(pkCloseFn);
+  bd.addEventListener('click', ()=>closeOverlay(pkCloseFn));
+  el.querySelector('.sheet-close').addEventListener('click', ()=>closeOverlay(pkCloseFn));
+  el.querySelectorAll('.pk-m:not(:disabled)').forEach(b=>b.addEventListener('click', ()=>{
+    perSetKey(parseInt(b.dataset.k)); closeOverlay(pkCloseFn); renderProdaja();
+  }));
+}
+document.getElementById('perName').addEventListener('click', openPerPicker);
 function renderProdaja(){
+  renderPerRow();
   const filtered = sales.filter(inSaleFilter);
   const sum = filtered.reduce((s,r)=>s+r.ukupno,0);
   const kom = filtered.reduce((s,r)=>s+r.kolicina,0);
@@ -2468,8 +2595,8 @@ document.getElementById('shareReportBtn').addEventListener('click', () => {
   if(filtered.length === 0){ showToast('Nema podataka za deljenje'); return; }
   const sum = filtered.reduce((s,r)=>s+r.ukupno,0);
   const kom = filtered.reduce((s,r)=>s+r.kolicina,0);
-  const labels = {sve:'ukupno', danas:'danas', mesec:'ovaj mesec', godina:'ova godina'};
-  const label = labels[activeSaleFilter] || 'ukupno';
+  const labels = {sve:'ukupno', danas:'danas'};
+  const label = labels[activeSaleFilter] || perLabel();
   let text = `Izveštaj o prodaji guma — ${label}\n\n`;
   filtered.forEach(r => {
     text += `${fmtDateSr(r.datum)} — ${r.dimenzije}${r.proizvodjac ? ' ('+r.proizvodjac+')' : ''} — ${r.kolicina} kom × ${fmt(r.cena)} din = ${fmt(r.ukupno)} din\n`;
@@ -2729,7 +2856,7 @@ let settingsCloseFn = null;   // nivo 1: ekran sa pločicama
 let settingsSubFn = null;     // nivo 2: otvoren pod-ekran
 const SETTINGS_BACK_SVG = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
 const NUM_ATTR = 'inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"';
-const APP_VERSION = 14;
+const APP_VERSION = 15;
 function daniRec(n){ return (n%10===1 && n%100!==11) ? 'dan' : 'dana'; }
 function settingsTile(icon, title, sub, onclick, extraClass){
   return '<button type="button" class="set-tile'+(extraClass?' '+extraClass:'')+'" onclick="'+onclick+'">'+
