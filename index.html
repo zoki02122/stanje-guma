@@ -1939,7 +1939,23 @@ function makeStrip(box, o){
     const mx = (z.s-1)*box.clientWidth/2 + 40, my = (z.s-1)*box.clientHeight/2 + 40;
     z.tx = Math.max(-mx, Math.min(mx, z.tx)); z.ty = Math.max(-my, Math.min(my, z.ty)); };
   const zReset = (anim)=>{ z.s = 1; z.r = 0; z.tx = 0; z.ty = 0; zApply(anim); };
-  const go = (i)=>{ i = Math.max(0, Math.min(n-1, i)); if(i !== idx){ zReset(false); idx = i; if(o.onIdx) o.onIdx(idx); } place(0, true); };
+  /* v14 (Zoran 24.11., kao Arhiva): listanje u krug — posle poslednje dolazi prva, pre prve poslednja.
+     Susedna slika preko kraja se privremeno pomeri na drugu stranu („duh“), traka klizne, pa se sve vrati na pravo mesto. */
+  let wrapT = 0;
+  const ghost = (dir)=>{ slides.forEach(sl=>{ if(sl._gh){ sl.style.transform = ''; sl._gh = 0; } });
+    if(n < 2 || !dir) return;
+    if(dir > 0 && idx === n-1){ slides[0].style.transform = 'translate3d('+(n*W())+'px,0,0)'; slides[0]._gh = 1; }
+    else if(dir < 0 && idx === 0){ slides[n-1].style.transform = 'translate3d('+(-n*W())+'px,0,0)'; slides[n-1]._gh = 1; } };
+  const go = (i)=>{
+    if(n >= 2 && (i >= n || i < 0)){
+      const dir = i >= n ? 1 : -1;
+      ghost(dir); zReset(false);
+      track.classList.add('anim'); track.style.transform = 'translate3d('+(-(idx+dir)*W())+'px,0,0)';
+      idx = dir > 0 ? 0 : n-1; if(o.onIdx) o.onIdx(idx);
+      clearTimeout(wrapT); wrapT = setTimeout(()=>{ wrapT = 0; ghost(0); place(0, false); }, 280);
+      return;
+    }
+    i = Math.max(0, Math.min(n-1, i)); if(i !== idx){ zReset(false); idx = i; if(o.onIdx) o.onIdx(idx); } place(0, true); };
   place(0, false);
   const rel = (t)=>{ const r = box.getBoundingClientRect(); return { x:t.clientX - r.left - r.width/2, y:t.clientY - r.top - r.height/2 }; };
   let g = null, sx = 0, sy = 0, moved = false, pinched = false, tapLast = null, tapTimer = null, lastTouch = 0;
@@ -1969,7 +1985,9 @@ function makeStrip(box, o){
     } else if(g.m === 'swipe' && e.touches.length === 1){
       const t = e.touches[0], dx = t.clientX - sx, dy = t.clientY - sy;
       if(!g.lock && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) g.lock = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
-      if(g.lock === 'x'){ moved = true; const edge = (dx > 0 && idx === 0) || (dx < 0 && idx === n-1); place(edge ? dx*0.3 : dx, false); }
+      if(g.lock === 'x'){ moved = true;
+        if(n < 2){ place(dx*0.3, false); }
+        else { if(!wrapT) ghost(dx < 0 ? 1 : -1); place(dx, false); } }
       else if(g.lock === 'y') moved = true;
     } else if(g.m === 'pan' && e.touches.length === 1){
       const t = e.touches[0]; z.tx = g.tx + (t.clientX - g.x); z.ty = g.ty + (t.clientY - g.y); zClamp(); zApply(false);
