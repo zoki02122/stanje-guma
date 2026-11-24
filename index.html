@@ -1560,15 +1560,28 @@ function wireBackspace(el, prev){
 function fieldVal(el){ return (pristineArmed.has(el) && el.value === '') ? (fieldOriginal.get(el) || '') : el.value; }
 function settleFields(root){ root.querySelectorAll('input,textarea').forEach(el => disarmField(el, true)); }
 
-/* v18: jednoredna polja (textarea.one-line) — Enter/novi red se ne upisuje (Enter = gotovo, sklanja tastaturu); nalepljen tekst bez novih redova;
-   data-num = samo cifre (kao ranije type=number). */
+/* v18: jednoredna polja (textarea.one-line) — novi red se ne upisuje; nalepljen tekst bez novih redova; data-num = samo cifre.
+   v19 (Zoran 24.11.: „pokvarili smo nešto što je dobro“): Enter = SLEDEĆE polje, kao ranije u Chrome-u (→ na tastaturi);
+   tek na poslednjem polju prozora Enter sklanja tastaturu. */
+const OL_ROOTS = '#sheet, #saleSheet, #settingsScreen, #stanjeControls';
+function olFields(el){
+  const root = el.closest(OL_ROOTS); if(!root) return [el];
+  return [...root.querySelectorAll('input:not([type=hidden]):not([type=file]):not([type=date]):not([type=checkbox]), textarea')]
+    .filter(f => !f.disabled && !f.readOnly && f.offsetParent !== null);
+}
+function olNext(el){ const l = olFields(el), i = l.indexOf(el); return i >= 0 && i < l.length-1 ? l[i+1] : null; }
+function olEnter(el){ const n = olNext(el); if(n){ try{ n.focus({ preventScroll:false }); }catch(err){ n.focus(); } } else el.blur(); }
+document.addEventListener('focusin', (e)=>{
+  const el = e.target; if(!el || !el.classList || !el.classList.contains('one-line')) return;
+  el.setAttribute('enterkeyhint', olNext(el) ? 'next' : 'done');
+}, true);
 document.addEventListener('beforeinput', (e)=>{
   const el = e.target; if(!el || !el.classList || !el.classList.contains('one-line')) return;
-  if(e.inputType === 'insertLineBreak' || e.inputType === 'insertParagraph'){ e.preventDefault(); el.blur(); }
+  if(e.inputType === 'insertLineBreak' || e.inputType === 'insertParagraph'){ e.preventDefault(); olEnter(el); }
 }, true);
 document.addEventListener('keydown', (e)=>{
   const el = e.target; if(!el || !el.classList || !el.classList.contains('one-line')) return;
-  if(e.key === 'Enter'){ e.preventDefault(); el.blur(); }
+  if(e.key === 'Enter'){ e.preventDefault(); olEnter(el); }
 }, true);
 document.addEventListener('input', (e)=>{
   const el = e.target; if(!el || !el.classList || !el.classList.contains('one-line') || e.isComposing) return;
@@ -2974,7 +2987,7 @@ let settingsCloseFn = null;   // nivo 1: ekran sa pločicama
 let settingsSubFn = null;     // nivo 2: otvoren pod-ekran
 const SETTINGS_BACK_SVG = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
 const NUM_ATTR = 'inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"';
-const APP_VERSION = 18;
+const APP_VERSION = 19;
 function daniRec(n){ return (n%10===1 && n%100!==11) ? 'dan' : 'dana'; }
 function settingsTile(icon, title, sub, onclick, extraClass){
   return '<button type="button" class="set-tile'+(extraClass?' '+extraClass:'')+'" onclick="'+onclick+'">'+
