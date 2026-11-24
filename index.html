@@ -211,6 +211,7 @@
   .ur-foot.urmode .btn.ur-sq .bi{display:flex;width:54px;height:54px;border-radius:14px;align-items:center;justify-content:center;font-size:22px;border:1px solid var(--line);background:var(--surface-2);color:var(--text);}
   .ur-foot.urmode .btn.primary.ur-sq .bi{background:var(--act-bg);border-color:var(--act-line);color:var(--on-act);box-shadow:var(--act-shine);}
   .ur-foot.urmode .bl-l{display:none;} .ur-foot.urmode .bl-s{display:inline;}
+  #sheet{scroll-padding-bottom:110px;}
   #sheet .sheet-actions.ur-foot{position:sticky;bottom:calc(-18px - env(safe-area-inset-bottom));z-index:3;background:var(--surface);margin:18px -18px 0;padding:10px 18px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);}
   /* v18 (Zoran 24.11.): pretraga — × ostaje gore; ↶ ↷ u redu na dnu, iznad tastature (interactive-widget=resizes-content) */
   .q-bar{display:none;}
@@ -1569,6 +1570,18 @@ function olFields(el){
   return [...root.querySelectorAll('input:not([type=hidden]):not([type=file]):not([type=date]):not([type=checkbox]), textarea')]
     .filter(f => !f.disabled && !f.readOnly && f.offsetParent !== null);
 }
+/* v20 (Zoran 24.11., snimak): polje u fokusu ne sme da ostane ispod reda Otkaži/Sačuvaj (pričvršćen dole) — prozor gume se
+   pomeri tako da je polje iznad reda; i posle smanjenja ekrana kad se tastatura podigne (resize). */
+function sheetReveal(el){
+  const sh = document.getElementById('sheet'); if(!el || !sh || !sh.contains(el) || !sh.classList.contains('open')) return;
+  const foot = sh.querySelector('.ur-foot'); if(!foot) return;
+  const r = el.getBoundingClientRect(), ft = foot.getBoundingClientRect().top, top = sh.getBoundingClientRect().top;
+  if(r.bottom > ft - 12) sh.scrollTop += r.bottom - ft + 16;
+  else if(r.top < top + 8) sh.scrollTop -= top + 8 - r.top;
+}
+document.addEventListener('focusin', (e)=>{ const el = e.target; if(!el.closest || !el.closest('#sheet')) return;
+  setTimeout(()=>sheetReveal(el), 60); setTimeout(()=>sheetReveal(el), 400); });
+window.addEventListener('resize', ()=>{ const a = document.activeElement; if(a && a.closest && a.closest('#sheet')) setTimeout(()=>sheetReveal(a), 60); });
 function olNext(el){ const l = olFields(el), i = l.indexOf(el); return i >= 0 && i < l.length-1 ? l[i+1] : null; }
 function olEnter(el){ const n = olNext(el); if(n){ try{ n.focus({ preventScroll:false }); }catch(err){ n.focus(); } } else el.blur(); }
 document.addEventListener('focusin', (e)=>{
@@ -2987,7 +3000,7 @@ let settingsCloseFn = null;   // nivo 1: ekran sa pločicama
 let settingsSubFn = null;     // nivo 2: otvoren pod-ekran
 const SETTINGS_BACK_SVG = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
 const NUM_ATTR = 'inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"';
-const APP_VERSION = 19;
+const APP_VERSION = 20;
 function daniRec(n){ return (n%10===1 && n%100!==11) ? 'dan' : 'dana'; }
 function settingsTile(icon, title, sub, onclick, extraClass){
   return '<button type="button" class="set-tile'+(extraClass?' '+extraClass:'')+'" onclick="'+onclick+'">'+
