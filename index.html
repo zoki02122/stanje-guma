@@ -2436,6 +2436,7 @@ const MESECI = ['Januar','Februar','Mart','April','Maj','Jun','Jul','Avgust','Se
 const _now0 = new Date();
 let perM = { y:_now0.getFullYear(), m:_now0.getMonth() }, perY = _now0.getFullYear();
 function perKey(y, m){ return y*12 + m; }
+function perReset(){ const n = new Date(); perM = { y:n.getFullYear(), m:n.getMonth() }; perY = n.getFullYear(); }
 function perNowKey(){ const n = new Date(); return activeSaleFilter === 'godina' ? n.getFullYear() : perKey(n.getFullYear(), n.getMonth()); }
 function perCurKey(){ return activeSaleFilter === 'godina' ? perY : perKey(perM.y, perM.m); }
 function perMinKey(){
@@ -2587,6 +2588,7 @@ document.getElementById('saleChips').addEventListener('click', (e) => {
   document.querySelectorAll('#saleChips .chip').forEach(c => c.classList.remove('active'));
   chip.classList.add('active');
   activeSaleFilter = chip.dataset.sf;
+  perReset();   /* v16 (Zoran 24.11.): povratak na Mesec/Godinu = tekući period */
   renderProdaja();
 });
 
@@ -2749,7 +2751,7 @@ document.getElementById('mfgSearchToggleBtn').addEventListener('click', () => {
 let prodajaBackFn = null;
 function showTab(name){
   document.querySelectorAll('#viewToggle button').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
-  if(name === 'prodaja') resetStanjeSearch();
+  if(name === 'prodaja'){ resetStanjeSearch(); perReset(); renderProdaja(); }
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.getElementById('panel-'+name).classList.add('active');
   document.getElementById('stanjeControls').style.display = (name === 'stanje') ? '' : 'none';
@@ -2856,7 +2858,7 @@ let settingsCloseFn = null;   // nivo 1: ekran sa pločicama
 let settingsSubFn = null;     // nivo 2: otvoren pod-ekran
 const SETTINGS_BACK_SVG = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
 const NUM_ATTR = 'inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"';
-const APP_VERSION = 15;
+const APP_VERSION = 16;
 function daniRec(n){ return (n%10===1 && n%100!==11) ? 'dan' : 'dana'; }
 function settingsTile(icon, title, sub, onclick, extraClass){
   return '<button type="button" class="set-tile'+(extraClass?' '+extraClass:'')+'" onclick="'+onclick+'">'+
