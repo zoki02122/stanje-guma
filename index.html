@@ -177,6 +177,10 @@
   .summary-bar .lbl{font-size:12.5px;color:var(--muted);margin-top:2px;}
   .summary-bar button{background:var(--act-bg);color:var(--on-act);border:1px solid var(--act-line);padding:10px 16px;border-radius:9px;font-weight:600;font-size:14px;font-family:inherit;cursor:pointer;box-shadow:var(--act-shine);}
 
+  /* v13 (Zoran 24.11., uzor Zakazivanje v30): strelica „Na vrh“ posle trećine ekrana skrolovanja, u visini dugmeta + */
+  .to-top{position:fixed;left:50%;bottom:calc(27px + env(safe-area-inset-bottom));z-index:21;width:48px;height:48px;margin:0 0 0 -24px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);background:color-mix(in srgb, var(--surface) 94%, transparent);color:var(--text);box-shadow:0 6px 18px -6px rgba(0,0,0,.55);opacity:0;transform:translateY(12px) scale(.9);pointer-events:none;transition:opacity .2s ease,transform .2s ease;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+  .to-top.show{opacity:1;transform:none;pointer-events:auto;}
+  .to-top:active{background:var(--surface-2);}
   .fab{position:fixed;right:18px;bottom:22px;width:58px;height:58px;border-radius:50%;background:var(--act-bg);color:var(--on-act);border:1px solid var(--act-line);font-size:30px;box-shadow:0 6px 18px rgba(0,0,0,.4), var(--act-shine);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:20;}
   .fab:active{transform:scale(0.94);}
 
@@ -673,6 +677,7 @@ html[data-theme="koza"]{
     </div>
   </main>
 
+  <button type="button" class="to-top" id="toTopBtn" aria-label="Na vrh" title="Na vrh"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg></button>
   <button class="fab" id="addBtn" title="Dodaj gumu" aria-label="Dodaj gumu"><span class="ic-emoji">+</span><svg class="ic-svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
 </div>
 
@@ -2697,7 +2702,7 @@ let settingsCloseFn = null;   // nivo 1: ekran sa pločicama
 let settingsSubFn = null;     // nivo 2: otvoren pod-ekran
 const SETTINGS_BACK_SVG = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
 const NUM_ATTR = 'inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"';
-const APP_VERSION = 12;
+const APP_VERSION = 13;
 function daniRec(n){ return (n%10===1 && n%100!==11) ? 'dan' : 'dana'; }
 function settingsTile(icon, title, sub, onclick, extraClass){
   return '<button type="button" class="set-tile'+(extraClass?' '+extraClass:'')+'" onclick="'+onclick+'">'+
@@ -2705,6 +2710,22 @@ function settingsTile(icon, title, sub, onclick, extraClass){
     '<span class="tile-text"><span class="tile-title">'+escapeHtml(title)+'</span>'+(sub?'<span class="tile-sub">'+escapeHtml(sub)+'</span>':'')+'</span>'+
     '<span class="tile-chev">›</span></button>';
 }
+/* v13: strelica na vrh (uzor Zakazivanje v30) — posle trećine ekrana; dok se kuca nema je; prozori je pokrivaju (viši slojevi) */
+var _toTopId = 0;
+function toTopSync(){
+  if(_toTopId) return;
+  _toTopId = requestAnimationFrame(()=>{
+    _toTopId = 0;
+    const btn = document.getElementById('toTopBtn'); if(!btn) return;
+    const ae = document.activeElement, typing = ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName);
+    btn.classList.toggle('show', window.scrollY > window.innerHeight / 3 && !typing);
+  });
+}
+document.getElementById('toTopBtn').onclick = ()=>{ document.getElementById('toTopBtn').classList.remove('show'); window.scrollTo({top:0, behavior:'smooth'}); };
+window.addEventListener('scroll', toTopSync, {passive:true});
+window.addEventListener('resize', toTopSync);
+document.addEventListener('focusin', toTopSync); document.addEventListener('focusout', toTopSync);
+
 function openSettings(){
   if(settingsCloseFn) return;
   const el = document.createElement('div'); el.className = 'settings-screen'; el.id = 'settingsScreen';
