@@ -333,10 +333,14 @@
   .vw-mk-pad{position:absolute;inset:0;z-index:3;touch-action:none;}
   body.vw-open #confirmBackdrop{z-index:49;} body.vw-open #confirmSheet{z-index:50;}
   /* v12 (Zoran 24.11., pravilo za sve aplikacije, uzor Zakazivanje v49): potvrda iskače GORE, odmah ispod vidljivog zaglavlja (--pop-top) */
-  #confirmBackdrop{z-index:40;}
-  #confirmSheet{top:var(--pop-top,80px);bottom:auto;left:12px;right:12px;max-width:616px;border-radius:22px;border:1px solid var(--line);z-index:41;
+  #confirmBackdrop,#saBackdrop,#excelChoiceBackdrop,#saleBackdrop{z-index:40;}
+  /* v12: svi mali iskačući prozori (potvrda, radnje prodaje, Excel izbor, prodaja) gore ispod zaglavlja; prozor gume preko celog ekrana odozgo */
+  #confirmSheet,#saSheet,#excelChoiceSheet,#saleSheet{top:var(--pop-top,80px);bottom:auto;left:12px;right:12px;max-width:616px;border-radius:22px;border:1px solid var(--line);z-index:41;
     transform:translateY(-12px);opacity:0;visibility:hidden;transition:transform .18s ease,opacity .18s ease,visibility 0s linear .18s;max-height:calc(100% - var(--pop-top,80px) - 16px);padding-bottom:20px;}
-  #confirmSheet.open{transform:none;opacity:1;visibility:visible;transition:transform .18s ease,opacity .18s ease;}
+  :is(#confirmSheet,#saSheet,#excelChoiceSheet,#saleSheet).open{transform:none;opacity:1;visibility:visible;transition:transform .18s ease,opacity .18s ease;}
+  #sheet{top:0;bottom:0;max-height:none;border-radius:0;border-top:none;transform:translateY(-100%);}
+  body.noting #sheet{top:var(--note-h);}
+  #sheet.open{transform:none;}
   .dim-one{display:flex;gap:10px;}
   .dim-one input{flex:1;min-width:0;letter-spacing:.3px;}
   .dim-c{flex:0 0 60px;border-radius:9px;border:1px solid var(--line);background:var(--surface-2);color:var(--muted);font:inherit;font-size:17px;font-weight:700;cursor:pointer;}
@@ -2278,6 +2282,7 @@ sCenaInput.addEventListener('keydown', (e) => {
 });
 
 function openSaleModal(){
+  updatePopTop();
   saleBackdrop.classList.add('open');
   requestAnimationFrame(()=> saleSheet.classList.add('open'));
   pushOverlay(closeSaleModal);
@@ -2455,6 +2460,7 @@ const saSheet = document.getElementById('saSheet');
 const saBackdrop = document.getElementById('saBackdrop');
 
 function openSaSheet(){
+  updatePopTop();
   saBackdrop.classList.add('open');
   requestAnimationFrame(()=> saSheet.classList.add('open'));
   pushOverlay(closeSaSheet);
@@ -2937,6 +2943,7 @@ const excelChoiceSheet = document.getElementById('excelChoiceSheet');
 const excelChoiceBackdrop = document.getElementById('excelChoiceBackdrop');
 
 function openExcelChoice(){
+  updatePopTop();
   excelChoiceBackdrop.classList.add('open');
   requestAnimationFrame(()=> excelChoiceSheet.classList.add('open'));
   pushOverlay(closeExcelChoice);
