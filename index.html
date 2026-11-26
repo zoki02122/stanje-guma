@@ -118,6 +118,12 @@
   .file-btn{display:block;width:100%;text-align:center;padding:13px;border-radius:10px;background:var(--surface-2);color:var(--text);border:1px solid var(--line);font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px;font-family:inherit;}
   .file-btn input[type="file"]{display:none;}
   .settings-hint{font-size:12px;color:var(--muted);margin-top:-4px;margin-bottom:14px;line-height:1.4;}
+  .settings-hint.bk-hint{margin:2px 4px 18px;}
+  .save-row{display:flex;gap:10px;align-items:stretch;}
+  .save-row textarea{flex:1;min-width:0;}
+  .btn.save-mini{flex:none;padding:0 18px;}
+  .btn.save-mini:disabled{opacity:.4;}
+  .days-err{display:none;font-size:12px;color:var(--red);margin-top:6px;}
   .divider{height:1px;background:var(--line);margin:18px 0;}
   .qty.low{color:var(--red);background:var(--danger-dim);}
 
@@ -665,7 +671,7 @@ html[data-theme="koza"]{
     <div id="warnBanner">Podaci se ne čuvaju trajno u ovom prikazu (samo dok je otvoreno). Za trajno čuvanje aplikacija treba da bude postavljena kao pravi sajt ili otvorena kao preuzet fajl u Chrome-u.</div>
     <div id="backupReminderBanner" style="display:none;">
       <span id="backupReminderText"></span>
-      <button type="button" id="backupReminderBtn">Izvezi bekap</button>
+      <button type="button" id="backupReminderBtn">Izvezi kopiju</button>
     </div>
     <div id="stanjeControls">
       <div class="search-dim">
@@ -841,7 +847,7 @@ html[data-theme="koza"]{
   </div>
 </div>
 
-<input type="file" id="importBackupInput" class="hidden-file" accept=".json,application/json">
+<input type="file" id="importBackupInput" class="hidden-file" accept=".json,.txt,application/json,text/plain">
 <input type="file" id="importExcelInput" class="hidden-file" accept=".xlsx,.xls,.csv">
 
 <div class="sheet-backdrop" id="confirmBackdrop"></div>
@@ -929,6 +935,18 @@ function safeSet(key, val){
     return true;
   }catch(e){ storageOK = false; return false; }
 }
+/* MODUL bekap-bezbednost v1 */
+function lsSet(key,val){ try{ localStorage.setItem(key,val); return true; }catch(e){ return false; } }
+/* neuspeo upis (pun prostor ili zabrana) se ne guta tiho: crveno „NIJE SAČUVANO!“ gore, najviše jednom u 4 s. Dok ono stoji,
+   zelene potvrde se ne prikazuju, da ne prekriju upozorenje i ne tvrde nešto što nije tačno. */
+var _saveFailAt = 0;
+function warnSaveFailed(){
+  const n = Date.now(); if(n - _saveFailAt < 4000) return; _saveFailAt = n;
+  logError('čuvanje', 'Upis u memoriju telefona nije uspeo (pun prostor ili zabrana).');
+  showToast('NIJE SAČUVANO! Memorija je puna ili nedostupna — odmah podeli kopiju.', 6000);
+}
+function saveFailActive(){ return Date.now() - _saveFailAt < 6000; }
+function persistChecked(key, val){ if(!lsSet(key, val)){ warnSaveFailed(); return false; } return true; }
 
 function loadAll(){
   const savedItems = safeGet(LS_ITEMS);
@@ -1169,23 +1187,21 @@ function confirmSwipeDelete(id){
     onConfirm:()=>{ deleteToTrash(id); } });
 }
 
-function persistItems(){ if(!safeSet(LS_ITEMS, items)){ logError('upis', 'Stanje nije sačuvano (memorija telefona)'); showToast('Upozorenje: nije sačuvano trajno'); } if(window.slikePocisti) window.slikePocisti(); }
-function persistSales(){ if(!safeSet(LS_SALES, sales)) showToast('Upozorenje: nije sačuvano trajno'); }
+function persistItems(){ if(!safeSet(LS_ITEMS, items)){ logError('upis', 'Stanje nije sačuvano (memorija telefona)'); warnSaveFailed(); } if(window.slikePocisti) window.slikePocisti(); }
+function persistSales(){ if(!safeSet(LS_SALES, sales)){ logError('upis', 'Prodaja nije sačuvana (memorija telefona)'); warnSaveFailed(); } }
 
 // ---------- BACKUP REMINDER ----------
 function getBackupIntervalDays(){
   const v = parseInt(localStorage.getItem(LS_BACKUP_INTERVAL));
   return (v && v > 0) ? v : 7;
 }
-function setBackupIntervalDays(days){
-  localStorage.setItem(LS_BACKUP_INTERVAL, String(days));
-}
+function setBackupIntervalDays(days){ return persistChecked(LS_BACKUP_INTERVAL, String(days)); }
 function getLastBackupDate(){
   const v = localStorage.getItem(LS_LAST_BACKUP);
   return v ? new Date(v) : null;
 }
 function markBackupDone(){
-  localStorage.setItem(LS_LAST_BACKUP, new Date().toISOString());
+  persistChecked(LS_LAST_BACKUP, new Date().toISOString());
   checkBackupReminder();
   updateLastBackupInfo();
 }
@@ -1218,14 +1234,15 @@ function updateLastBackupInfo(){
   const el = document.getElementById('lastBackupInfo');
   if(!el) return;
   const last = getLastBackupDate();
-  el.textContent = last ? `Poslednji bekap: ${fmtDateSrFromDate(last)}` : 'Poslednji bekap: nikad';
+  el.textContent = 'Poslednja: '+(last ? fmtDateSrFromDate(last) : 'nikad');
 }
 
 // Obaveštenje gore (isti način kao Arhiva): stoji ms (podrazumevano 4 s) i samo nestane. Dodir ga ne zatvara.
 // Ako vreme istekne dok je prst na ekranu, čeka da se prst podigne (da se sadržaj ne pomeri pod prstom).
 let _note = null, _noteTimer = null, _noteWait = false, _ptrDown = 0;
-const NOTE_WARN_RE = /^(Unesi|Upozorenje|Greška|Nema |Nisu |Nije |Fajl nije|Deljenje nije)/;
+const NOTE_WARN_RE = /^(Unesi|Upozorenje|Greška|Nema |Nisu |Nije |NIJE |Fajl nije|Deljenje nije|Fascikla nije|Rezervna kopija nije|Ovo nije|Ovo je kopija)/;
 function showToast(msg, ms){
+  if(!NOTE_WARN_RE.test(String(msg)) && saveFailActive()) return;   /* bekap-bezbednost: zelena potvrda ne prekriva „NIJE SAČUVANO!“ */
   _note = {text: String(msg), warn: NOTE_WARN_RE.test(String(msg))};
   clearTimeout(_noteTimer); _noteWait = false;
   _noteTimer = setTimeout(noteTimeUp, ms || 4000);
@@ -3000,7 +3017,7 @@ let settingsCloseFn = null;   // nivo 1: ekran sa pločicama
 let settingsSubFn = null;     // nivo 2: otvoren pod-ekran
 const SETTINGS_BACK_SVG = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
 const NUM_ATTR = 'inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"';
-const APP_VERSION = 20;
+const APP_VERSION = 21;
 function daniRec(n){ return (n%10===1 && n%100!==11) ? 'dan' : 'dana'; }
 function settingsTile(icon, title, sub, onclick, extraClass){
   return '<button type="button" class="set-tile'+(extraClass?' '+extraClass:'')+'" onclick="'+onclick+'">'+
@@ -3043,11 +3060,9 @@ function setSettingsView(title, bodyHtml){
 }
 function renderSettingsTiles(){
   const last = getLastBackupDate();
-  const n = getBackupIntervalDays();
   setSettingsView('Podešavanja',
     settingsTile('🎨', 'Tema', themeName(getTheme()), "openSettingsSub('theme')")+
     settingsTile('💾', 'Rezervna kopija', last ? 'Poslednja: '+fmtDateSrFromDate(last) : 'Još nije napravljena', "openSettingsSub('backup')")+
-    settingsTile('⏰', 'Podsetnik za bekap', n === 1 ? 'Svaki dan' : 'Na svakih '+n+' '+daniRec(n), "openSettingsSub('reminder')")+
     settingsTile('🔑', 'Gemini API ključ', getApiKey() ? 'Ključ je unet' : 'Ključ nije unet', "openSettingsSub('apikey')")+
     settingsTile('📊', 'Uvoz iz Excel / CSV', 'Excel ili CSV fajl', "openSettingsSub('excel')")+
     settingsTile('🗑', 'Korpa', trashTileSub(), "openTrashScreen()")+
@@ -3061,17 +3076,25 @@ function openSettingsSub(key){
     title = 'Tema';
     body = '<div id="themeOptList">'+themeOptionsHtml()+'</div>';
   } else if(key === 'backup'){
+    /* v21 (Zoran 26.11.): kao Zakazivanje v31/v54 — izvezi / podeli / uvezi, fascikla i podsetnik na istom ekranu */
     title = 'Rezervna kopija';
-    body = '<button type="button" class="file-btn" id="exportBackupBtn" onclick="doExportBackup()">Izvezi bekap (.json)</button>'+
-      '<div class="settings-hint">Snima kompletno stanje i istoriju prodaje u jedan fajl koji možeš sačuvati sa strane.</div>'+
-      '<div class="settings-hint" id="lastBackupInfo"></div>'+
-      '<label class="file-btn" for="importBackupInput">Uvezi bekap (.json)</label>'+
-      '<div class="settings-hint">Vraća stanje iz prethodno izvezenog bekapa (zamenjuje trenutne podatke).</div>';
-  } else if(key === 'reminder'){
-    title = 'Podsetnik za bekap';
-    body = '<div class="field"><label for="backupIntervalInput">Podseti me na svakih (dana)</label>'+
-      '<textarea rows="1" wrap="off" enterkeyhint="done" class="one-line" data-num="1" id="backupIntervalInput" '+NUM_ATTR+' oninput="saveBackupInterval(this.value)">'+getBackupIntervalDays()+'</textarea></div>'+
-      '<div class="settings-hint">Kad prođe ovoliko dana od poslednjeg bekapa, gore će se pojaviti podsetnik.</div>';
+    const hint = t => '<div class="settings-hint bk-hint">'+t+'</div>';
+    const last = getLastBackupDate();
+    body = settingsTile('💾', 'Rezervna kopija - izvezi', 'Poslednja: '+(last ? fmtDateSrFromDate(last) : 'nikad'), 'exportBackup()').replace('class="tile-sub"', 'class="tile-sub" id="lastBackupInfo"')+
+      (canShareBackup() ? settingsTile('📤', 'Rezervna kopija - podeli', 'Google Drive, mejl…', 'shareBackup()') : '')+
+      settingsTile('📂', 'Rezervna kopija - uvezi', '', "document.getElementById('importBackupInput').click()")+
+      hint('Rezervna kopija čuva stanje, istoriju prodaje i slike guma odjednom — sačuvaj je povremeno da ne izgubiš podatke. Fascikla je na telefonu; „podeli“ šalje kopiju van telefona (npr. Google Drive).')+
+      (backupDirSupported() ?
+        settingsTile('📁', 'Fascikla za kopiju', '…', 'chooseBackupDir()').replace('class="tile-sub"', 'class="tile-sub" id="backupDirName"')+
+        settingsTile('↩️', 'Ne koristi fasciklu (preuzimanje)', '', 'forgetBackupDir()').replace('class="set-tile"', 'class="set-tile" id="backupDirForget"')+
+        hint('Kad je fascikla izabrana, izvoz ide pravo u nju (Chrome jednom pita „Dozvoli“). Čuvaju se poslednje '+BACKUP_KEEP+' kopije, starije se same brišu.')
+      : '')+
+      '<div class="field"><label for="backupIntervalInput">Podseti me na svakih (dana)</label>'+
+      '<div class="save-row"><textarea rows="1" wrap="off" enterkeyhint="done" class="one-line" data-num="1" maxlength="3" id="backupIntervalInput" '+NUM_ATTR+'>'+getBackupIntervalDays()+'</textarea>'+
+      '<button type="button" class="btn primary save-mini" id="backupIntervalSave" disabled>Sačuvaj</button></div>'+
+      '<div class="days-err" id="backupIntervalErr">Upiši broj od 1 do 365.</div></div>'+
+      hint('Kad prođe ovoliko dana od poslednje rezervne kopije, gore će se pojaviti podsetnik.')+
+      '<div class="settings-hint" id="persistHint">'+persistHintText()+'</div>';
   } else if(key === 'excel'){
     title = 'Uvoz iz Excel / CSV';
     body = '<label class="file-btn" for="importExcelInput">Uvezi Excel/CSV fajl</label>'+
@@ -3091,7 +3114,7 @@ function openSettingsSub(key){
       '<button type="button" class="btn danger wide" id="wipeSalesBtn" onclick="wipeSales()">Obriši istoriju prodaje</button>';
   } else return;
   setSettingsView(title, body);
-  if(key === 'backup') updateLastBackupInfo();
+  if(key === 'backup'){ refreshBackupDirRow(); wireBackupInterval(); }
   settingsSubFn = () => { settingsSubFn = null; renderSettingsTiles(); };
   pushOverlay(settingsSubFn);
 }
@@ -3113,53 +3136,207 @@ function closeSettings(){
 }
 document.getElementById('settingsBtn').addEventListener('click', openSettings);
 
-// ---------- BACKUP: export ----------
-function doExportBackup(){
-  const payload = { exportedAt: new Date().toISOString(), items, sales, theme: getTheme(), backupIntervalDays: getBackupIntervalDays(),
-    slike: [...SLIKE].map(([id, sl]) => ({ id, slike: sl })) };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+// ---------- REZERVNA KOPIJA: izvoz / deljenje / fascikla / uvoz ----------
+/* v21 (Zoran 26.11.: „rezervna kopija po uzoru na Zakazivanje“): isti način kao Zakazivanje v31/v54.
+   Kopija ima oznaku app:'stanje-guma'; uvoz odbija kopiju druge aplikacije. Korpa, API ključ i fascikla NE idu u kopiju. */
+function buildBackup(){
+  return { app:'stanje-guma', version:1, exportedAt: new Date().toISOString(), items, sales, theme: getTheme(),
+    backupIntervalDays: getBackupIntervalDays(), slike: [...SLIKE].map(([id, sl]) => ({ id, slike: sl })) };
+}
+/* „Podeli“ — Androidov meni za deljenje (Google Drive, mejl…). Chrome ne deli .json (izvorni kod Chromium-a,
+   chrome/browser/webshare/share_service_impl.cc), .txt/text/plain da → isti JSON u fajlu .txt. navigator.share se zove odmah
+   u dodiru. Drive za ime fajla uzima NASLOV deljenja → title = ime fajla sa datumom i vremenom. Beleži se tek kad deljenje uspe. */
+function backupShareName(){
+  const d = new Date(), p = n=>String(n).padStart(2,'0');
+  return 'stanje-guma-kopija-'+todayISO()+'-'+p(d.getHours())+'.'+p(d.getMinutes())+'.txt';
+}
+function canShareBackup(){
+  try{ return !!(navigator.canShare && navigator.share && navigator.canShare({ files:[ new File(['{}'], 'proba.txt', {type:'text/plain'}) ] })); }
+  catch(e){ return false; }
+}
+function shareBackup(){
+  let file; const name = backupShareName();
+  try{ file = new File([JSON.stringify(buildBackup(), null, 2)], name, {type:'text/plain'}); }
+  catch(e){ showToast('Deljenje nije uspelo: '+(e && e.message ? e.message : e)); return; }
+  navigator.share({ files:[file], title: name }).then(()=>{
+    markBackupDone();
+    showToast('Kopija je podeljena.');
+  }).catch(err=>{
+    if(err && err.name === 'AbortError') return;
+    logError('deljenje kopije', (err && err.message) || String(err));
+    showToast('Deljenje nije uspelo: '+(err && err.message ? err.message : err));
+  });
+}
+/* trajno čuvanje — Chrome sam odlučuje, bez prozora (web.dev/articles/persistent-storage) */
+let storagePersisted = null;
+function requestPersistentStorage(){
+  if(!(navigator.storage && navigator.storage.persist)) return;
+  navigator.storage.persisted().then(p=> p ? true : navigator.storage.persist()).then(p=>{
+    storagePersisted = !!p;
+    const el = document.getElementById('persistHint'); if(el) el.textContent = persistHintText();
+  }).catch(()=>{});
+}
+function persistHintText(){
+  if(storagePersisted === null) return '';
+  return storagePersisted ? '✓ Chrome čuva podatke ove aplikacije trajno (ne briše ih sam kad ponestane mesta).'
+                          : 'Chrome nije odobrio trajno čuvanje — redovno pravi rezervnu kopiju.';
+}
+requestPersistentStorage();
+/* „Fascikla za kopiju“ (uzor Zakazivanje v31 / Arhiva v293): bira se jednom (showDirectoryPicker, Chrome za Android od 132);
+   izvoz ide pravo u nju, čuvaju se poslednje BACKUP_KEEP kopije. Dozvola se traži odmah na dodir. Bez fascikle ili kad
+   ona nije dostupna → preuzimanje. Fascikla se pamti u maloj bazi stanjeGuma-uredjaj (ne ide u kopiju). */
+const BACKUP_KEEP = 3;
+const BACKUP_NAME_RE = /^stanje-guma-kopija-\d{4}-\d{2}-\d{2}\.json$/;
+let backupDirHandle = null;
+function backupDirSupported(){ return 'showDirectoryPicker' in window; }
+function sgDevDb(){
+  return new Promise((res, rej)=>{
+    const r = indexedDB.open('stanjeGuma-uredjaj', 1);
+    r.onupgradeneeded = ()=>r.result.createObjectStore('kv');
+    r.onsuccess = ()=>res(r.result); r.onerror = ()=>rej(r.error);
+  });
+}
+async function backupDirSave(h){
+  const db = await sgDevDb();
+  await new Promise((res, rej)=>{ const tx = db.transaction('kv','readwrite'); const st = tx.objectStore('kv');
+    if(h) st.put(h, 'fascikla'); else st.delete('fascikla'); tx.oncomplete = res; tx.onerror = ()=>rej(tx.error); });
+  db.close();
+}
+async function backupDirLoad(){
+  if(!backupDirSupported() || !window.indexedDB) return;
+  try{
+    const db = await sgDevDb();
+    backupDirHandle = await new Promise((res, rej)=>{ const r = db.transaction('kv').objectStore('kv').get('fascikla');
+      r.onsuccess = ()=>res(r.result || null); r.onerror = ()=>rej(r.error); });
+    db.close();
+  }catch(e){ console.error(e); backupDirHandle = null; }
+  refreshBackupDirRow();
+}
+backupDirLoad();
+async function chooseBackupDir(){
+  try{
+    const h = await window.showDirectoryPicker({ mode:'readwrite', id:'stanje-guma-kopija' });
+    backupDirHandle = h;
+    await backupDirSave(h);
+    showToast('Fascikla izabrana: '+h.name);
+  }catch(e){
+    if(e && e.name !== 'AbortError'){ logError('fascikla', (e && e.message) || String(e)); showToast('Fascikla nije izabrana.'); }
+  }
+  refreshBackupDirRow();
+}
+async function forgetBackupDir(){
+  backupDirHandle = null;
+  try{ await backupDirSave(null); }catch(e){ console.error(e); }
+  showToast('Rezervna kopija ide ponovo preko preuzimanja.');
+  refreshBackupDirRow();
+}
+function refreshBackupDirRow(){
+  const el = document.getElementById('backupDirName');
+  if(el) el.textContent = backupDirHandle ? backupDirHandle.name : 'Nije izabrana (preuzimanje)';
+  const f = document.getElementById('backupDirForget');
+  if(f) f.style.display = backupDirHandle ? '' : 'none';
+}
+async function ensureDirPermission(dir){
+  try{
+    let perm = await dir.queryPermission({ mode:'readwrite' });
+    if(perm !== 'granted') perm = await dir.requestPermission({ mode:'readwrite' });
+    return perm === 'granted';
+  }catch(e){ console.error(e); return false; }
+}
+async function writeBackupToDir(dir, blob, fileName){
+  const fh = await dir.getFileHandle(fileName, { create:true });
+  const w = await fh.createWritable();
+  await w.write(blob);
+  await w.close();
+  try{
+    const names = [];
+    for await (const [name, h] of dir.entries()){ if(h.kind === 'file' && BACKUP_NAME_RE.test(name)) names.push(name); }
+    names.sort().reverse();
+    for(const old of names.slice(BACKUP_KEEP)) await dir.removeEntry(old);
+  }catch(e){ console.error(e); }
+}
+function downloadBackup(blob, fileName){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  const stamp = todayISO();
-  a.href = url;
-  a.download = `stanje-guma-bekap-${stamp}.json`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(()=> URL.revokeObjectURL(url), 2000);
-  markBackupDone();
-  showToast('Bekap sačuvan');
+  a.href = url; a.download = fileName;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 2000);
 }
-function saveBackupInterval(val){
-  const v = parseInt(val) || 7;
-  setBackupIntervalDays(v);
-  checkBackupReminder();
+let _backupBusy = false;
+async function exportBackup(){
+  if(_backupBusy) return;
+  _backupBusy = true;
+  try{
+    const dirOk = backupDirHandle ? await ensureDirPermission(backupDirHandle) : false;
+    const blob = new Blob([JSON.stringify(buildBackup(), null, 2)], {type:'application/json'});
+    const fileName = 'stanje-guma-kopija-'+todayISO()+'.json';
+    let msg;
+    if(backupDirHandle && dirOk){
+      try{ await writeBackupToDir(backupDirHandle, blob, fileName); msg = 'Rezervna kopija upisana u „'+backupDirHandle.name+'“.'; }
+      catch(e){ logError('fascikla', (e && e.message) || String(e)); downloadBackup(blob, fileName); msg = 'Fascikla nije dostupna — kopija sačuvana preuzimanjem.'; }
+    }else{
+      downloadBackup(blob, fileName);
+      msg = backupDirHandle ? 'Fascikla nije dostupna — kopija sačuvana preuzimanjem.' : 'Rezervna kopija preuzeta: „'+fileName+'“.';
+    }
+    markBackupDone();
+    showToast(msg);
+  }catch(e){
+    logError('izvoz kopije', (e && e.message) || String(e));
+    showToast('Rezervna kopija nije uspela.');
+  }finally{ _backupBusy = false; }
+}
+/* broj dana podsetnika: čuva se SAMO dugmetom „Sačuvaj“ uz polje ili Enter-om (kao Zakazivanje v53); dugme bledo dok broj
+   nije nov i ispravan (1–365). Gboard: vrednost se upisuje tek posle izlaska iz polja. */
+function wireBackupInterval(){
+  const input = document.getElementById('backupIntervalInput'), btn = document.getElementById('backupIntervalSave'), err = document.getElementById('backupIntervalErr');
+  if(!input || !btn || !err) return;
+  const raw = ()=>String(fieldVal(input)).trim();
+  const check = ()=>{
+    const r = raw(), ok = /^[0-9]+$/.test(r) && +r >= 1 && +r <= 365;
+    btn.disabled = !(ok && +r !== getBackupIntervalDays());
+    err.style.display = (r !== '' && !ok) ? 'block' : 'none';
+  };
+  const save = ()=>{
+    if(btn.disabled) return;
+    const n = +raw();
+    input.blur();
+    if(!setBackupIntervalDays(n)) return;
+    input.value = String(n);
+    checkBackupReminder(); check();
+    showToast('Sačuvano: podsetnik na svakih '+n+' '+daniRec(n));
+  };
+  input.addEventListener('input', check);
+  input.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') save(); });
+  input.addEventListener('beforeinput', (e)=>{ if(e.inputType === 'insertLineBreak' || e.inputType === 'insertParagraph') save(); });
+  btn.addEventListener('pointerdown', (e)=>e.preventDefault());   /* dodir na Sačuvaj ne skida fokus pre čuvanja */
+  btn.addEventListener('click', save);
+  check();
 }
 
-document.getElementById('backupReminderBtn').addEventListener('click', () => {
-  openSettings();
-  openSettingsSub('backup');
-  doExportBackup();
-});
+/* traka-podsetnik gore: odmah pravi kopiju (kao Zakazivanje), bez otvaranja Podešavanja */
+document.getElementById('backupReminderBtn').addEventListener('click', () => { exportBackup(); });
 
-// ---------- BACKUP: import ----------
+// ---------- REZERVNA KOPIJA: uvoz (.json ili .txt iz „podeli“) ----------
 document.getElementById('importBackupInput').addEventListener('change', (e) => {
   const file = e.target.files[0];
   if(!file) return;
   const reader = new FileReader();
   reader.onload = () => {
     try{
-      const data = JSON.parse(reader.result);
-      if(!data || !Array.isArray(data.items)){ showToast('Fajl nije validan bekap'); return; }
+      let data;
+      try{ data = JSON.parse(reader.result); }catch(err){ showToast('Fajl nije ispravna rezervna kopija.'); return; }
+      if(!data || !Array.isArray(data.items)){ showToast('Fajl nije ispravna rezervna kopija.'); return; }
+      if(data.app && data.app !== 'stanje-guma'){ showToast('Ovo je kopija druge aplikacije ('+data.app+'), ne Stanja guma.'); return; }
+      if(!data.app && data.items.length && !data.items.every(x => x && 'kolicina' in x)){ showToast('Ovo nije kopija Stanja guma (stavke nemaju količinu).'); return; }
       showConfirm({
-        title: 'Uvoz bekapa',
-        message: `Uvesti bekap od ${data.exportedAt ? fmtDateSr(data.exportedAt.slice(0,10)) : 'nepoznatog datuma'}? Ovo zamenjuje trenutno stanje i istoriju prodaje.`,
+        title: 'Uvoz rezervne kopije',
+        message: `Uvesti kopiju od ${data.exportedAt ? fmtDateSr(data.exportedAt.slice(0,10)) : 'nepoznatog datuma'} (${data.items.length} ${gumaRec(data.items.length)})? Ovo zamenjuje trenutno stanje i istoriju prodaje.`,
         confirmLabel: 'Uvezi',
         danger: true,
         onConfirm: () => {
           items = data.items.map(it => ({...it, id: it.id || uid()}));
           sales = Array.isArray(data.sales) ? data.sales.map(s => ({...s, id: s.id || uid()})) : [];
-          // tema i interval: samo ako su u bekapu i ispravni (stari bekap ih nema i ništa ne menja)
+          // tema i interval: samo ako su u kopiji i ispravni (stara kopija ih nema i ništa ne menja)
           if(typeof data.theme === 'string' && validTheme(data.theme)) setTheme(data.theme);
           const bi = parseInt(data.backupIntervalDays);
           if(bi > 0) setBackupIntervalDays(bi);
@@ -3170,12 +3347,12 @@ document.getElementById('importBackupInput').addEventListener('change', (e) => {
           renderProdaja();
           checkBackupReminder();
           closeSettings();
-          showToast('Bekap uvezen');
+          showToast('Rezervna kopija je uvezena.');
         }
       });
     }catch(err){
-      logError('uvoz bekapa', (err && err.message) || String(err));
-      showToast('Greška pri čitanju fajla');
+      logError('uvoz kopije', (err && err.message) || String(err));
+      showToast('Greška pri čitanju fajla.');
     }
   };
   reader.readAsText(file);
